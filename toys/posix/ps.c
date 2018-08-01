@@ -48,8 +48,8 @@ USE_PS(NEWTOY(ps, "k(sort)*P(ppid)*aAdeflMno*O*p(pid)*s*t*Tu*U*g*G*wZ[!ol][+Ae][
 // stayroot because iotop needs root to read other process' proc/$$/io
 // TOP and IOTOP have a large common option block used for common processing,
 // the default values are different but the flags are in the same order.
-USE_TOP(NEWTOY(top, ">0O*" "Hk*o*p*u*s#<1d#=3<1m#n#<1bq[!oO]", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_LOCALE))
-USE_IOTOP(NEWTOY(iotop, ">0AaKO" "Hk*o*p*u*s#<1=7d#=3<1m#n#<1bq", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_STAYROOT|TOYFLAG_LOCALE))
+USE_TOP(NEWTOY(top, ">0O*" "Hk*o*p*u*s#<1d:m#n#<1bq[!oO]", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_LOCALE))
+USE_IOTOP(NEWTOY(iotop, ">0AaKO" "Hk*o*p*u*s#<1=7d:m#n#<1bq", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_STAYROOT|TOYFLAG_LOCALE))
 USE_PGREP(NEWTOY(pgrep, "?cld:u*U*t*s*P*g*G*fnovxL:[-no]", TOYFLAG_USR|TOYFLAG_BIN))
 USE_PKILL(NEWTOY(pkill,    "?Vu*U*t*s*P*g*G*fnovxl:[-no]", TOYFLAG_USR|TOYFLAG_BIN))
 
@@ -61,36 +61,28 @@ config PS
 
     List processes.
 
-    Which processes to show (selections may be comma separated lists):
+    Which processes to show (-gGuUpPt selections may be comma separated lists):
 
-    -A	All processes
-    -a	Processes with terminals that aren't session leaders
-    -d	All processes that aren't session leaders
-    -e	Same as -A
-    -g	Belonging to GROUPs
-    -G	Belonging to real GROUPs (before sgid)
-    -p	PIDs (--pid)
-    -P	Parent PIDs (--ppid)
-    -s	In session IDs
-    -t	Attached to selected TTYs
-    -T	Show threads
-    -u	Owned by USERs
-    -U	Owned by real USERs (before suid)
+    -A  all					-a  has terminal not session leader
+    -d  All but session leaders		-e  synonym for -A
+    -g  in GROUPs				-G  in real GROUPs (before sgid)
+    -p  PIDs (--pid)			-P  Parent PIDs (--ppid)
+    -s  In session IDs			-t  Attached to selected TTYs
+    -T  Show threads also			-u  Owned by selected USERs
+    -U  real USERs (before suid)
 
     Output modifiers:
 
-    -k	Sort FIELDs in +increasing or -decreasting order (--sort)
-    -M	Measure field widths (expanding as necessary)
-    -n	Show numeric USER and GROUP
-    -w	Wide output (don't truncate fields)
+    -k  Sort FIELDs (-FIELD to reverse)	-M  Measure/pad future field widths
+    -n  Show numeric USER and GROUP		-w  Wide output (don't truncate fields)
 
     Which FIELDs to show. (Default = -o PID,TTY,TIME,CMD)
 
-    -f	Full listing (-o USER:12=UID,PID,PPID,C,STIME,TTY,TIME,ARGS=CMD)
-    -l	Long listing (-o F,S,UID,PID,PPID,C,PRI,NI,ADDR,SZ,WCHAN,TTY,TIME,CMD)
-    -o	Output FIELDs instead of defaults, each with optional :size and =title
-    -O	Add FIELDS to defaults
-    -Z	Include LABEL
+    -f  Full listing (-o USER:12=UID,PID,PPID,C,STIME,TTY,TIME,ARGS=CMD)
+    -l  Long listing (-o F,S,UID,PID,PPID,C,PRI,NI,ADDR,SZ,WCHAN,TTY,TIME,CMD)
+    -o  Output FIELDs instead of defaults, each with optional :size and =title
+    -O  Add FIELDS to defaults
+    -Z  Include LABEL
 
     Command line -o fields:
 
@@ -126,7 +118,7 @@ config PS
       TIME  CPU time consumed                 TTY     Controlling terminal
       UID   User id                           USER    User name
       VSZ   Virtual memory size (1k units)    %VSZ    VSZ as % of physical memory
-      WCHAN What are we waiting in kernel for
+      WCHAN Wait location in kernel
 
 config TOP
   bool "top"
@@ -249,13 +241,15 @@ GLOBALS(
     struct {
       long n;
       long m;
-      long d;
+      char *d;
       long s;
       struct arg_list *u;
       struct arg_list *p;
       struct arg_list *o;
       struct arg_list *k;
       struct arg_list *O;
+
+      long d_ms;
     } top;
     struct {
       char *L;
@@ -649,7 +643,7 @@ static void show_ps(void *p)
     if (!abslen) putchar('+');
     if (!width) break;
   }
-  xputc(TT.time ? '\r' : '\n');
+  putchar(TT.time ? '\r' : '\n');
 }
 
 // dirtree callback: read data about process to display, store, or discard it.
@@ -1359,9 +1353,9 @@ static int header_line(int line, int rev)
 
   if (toys.optflags&FLAG_b) rev = 0;
 
-  printf("%s%*.*s%s\r\n", rev ? "\033[7m" : "",
+  printf("%s%*.*s%s%s\n", rev ? "\033[7m" : "",
     (toys.optflags&FLAG_b) ? 0 : -TT.width, TT.width, toybuf,
-    rev ? "\033[0m" : "");
+    rev ? "\033[0m" : "", (toys.optflags&FLAG_b) ? "" : "\r");
 
   return line-1;
 }
@@ -1380,6 +1374,10 @@ static void top_common(
  
   unsigned tock = 0;
   int i, lines, topoff = 0, done = 0;
+  char stdout_buf[BUFSIZ];
+
+  // Avoid flicker in interactive mode.
+  if (!(toys.optflags&FLAG_b)) setbuf(stdout, stdout_buf);
 
   toys.signal = SIGWINCH;
   TT.bits = get_headers(TT.fields, toybuf, sizeof(toybuf));
@@ -1556,8 +1554,13 @@ static void top_common(
       recalc = 1;
 
       for (i = 0; i<lines && i+topoff<mix.count; i++) {
-        if (!(toys.optflags&FLAG_b) && i) xputc('\n');
+        // Running processes are shown in bold.
+        int bold = !(toys.optflags&FLAG_b) && mix.tb[i+topoff]->state == 'R';
+
+        if (!(toys.optflags&FLAG_b) && i) putchar('\n');
+        if (bold) printf("\033[1m");
         show_ps(mix.tb[i+topoff]);
+        if (bold) printf("\033[m");
       }
 
       if (TT.top.n && !--TT.top.n) {
@@ -1566,8 +1569,8 @@ static void top_common(
       }
 
       now = millitime();
-      if (timeout<=now) timeout = new.whence+TT.top.d;
-      if (timeout<=now || timeout>now+TT.top.d) timeout = now+TT.top.d;
+      if (timeout<=now) timeout = new.whence+TT.top.d_ms;
+      if (timeout<=now || timeout>now+TT.top.d_ms) timeout = now+TT.top.d_ms;
 
       // In batch mode, we ignore the keyboard.
       if (toys.optflags&FLAG_b) {
@@ -1575,7 +1578,7 @@ static void top_common(
         // Make an obvious gap between datasets.
         xputs("\n\n");
         continue;
-      }
+      } else fflush(stdout);
 
       i = scan_key_getsize(scratch, timeout-now, &TT.width, &TT.height);
       if (i==-1 || i==3 || toupper(i)=='Q') {
@@ -1621,7 +1624,12 @@ static void top_common(
 
 static void top_setup(char *defo, char *defk)
 {
-  TT.top.d *= 1000;
+  if (TT.top.d) {
+    long frac;
+
+    TT.top.d_ms = xparsetime(TT.top.d, 1000, &frac) * 1000;
+    TT.top.d_ms += frac;
+  } else TT.top.d_ms = 3000;
 
   TT.ticks = sysconf(_SC_CLK_TCK); // units for starttime/uptime
   TT.tty = tty_fd() != -1;

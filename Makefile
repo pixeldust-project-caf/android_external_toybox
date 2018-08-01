@@ -7,13 +7,13 @@
 
 HOSTCC?=cc
 
-export CROSS_COMPILE CFLAGS OPTIMIZE LDOPTIMIZE CC HOSTCC V
+export CROSS_COMPILE CFLAGS OPTIMIZE LDOPTIMIZE CC HOSTCC V STRIP
 
 all: toybox
 
 KCONFIG_CONFIG ?= .config
 
-toybox_stuff: $(KCONFIG_CONFIG) *.[ch] lib/*.[ch] toys/*.h toys/*/*.c scripts/*.sh
+toybox_stuff: $(KCONFIG_CONFIG) *.[ch] lib/*.[ch] toys/*/*.c scripts/*.sh
 
 toybox generated/unstripped/toybox: toybox_stuff
 	scripts/make.sh

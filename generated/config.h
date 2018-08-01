@@ -14,6 +14,8 @@
 #define USE_TOYBOX_FORK(...) __VA_ARGS__
 #define CFG_TOYBOX_FREE 0
 #define USE_TOYBOX_FREE(...)
+#define CFG_TOYBOX_GETRANDOM 0
+#define USE_TOYBOX_GETRANDOM(...)
 #define CFG_TOYBOX_HELP_DASHDASH 1
 #define USE_TOYBOX_HELP_DASHDASH(...) __VA_ARGS__
 #define CFG_TOYBOX_HELP 1
@@ -60,6 +62,8 @@
 #define USE_BASE64(...) __VA_ARGS__
 #define CFG_BASENAME 1
 #define USE_BASENAME(...) __VA_ARGS__
+#define CFG_BC 1
+#define USE_BC(...) __VA_ARGS__
 #define CFG_BLKID 1
 #define USE_BLKID(...) __VA_ARGS__
 #define CFG_BLOCKDEV 1
@@ -136,6 +140,14 @@
 #define USE_DEBUG_DHCP(...)
 #define CFG_DECOMPRESS 0
 #define USE_DECOMPRESS(...)
+#define CFG_DEMO_MANY_OPTIONS 0
+#define USE_DEMO_MANY_OPTIONS(...)
+#define CFG_DEMO_NUMBER 0
+#define USE_DEMO_NUMBER(...)
+#define CFG_DEMO_SCANKEY 0
+#define USE_DEMO_SCANKEY(...)
+#define CFG_DEMO_UTF8TOWC 0
+#define USE_DEMO_UTF8TOWC(...)
 #define CFG_DF 1
 #define USE_DF(...) __VA_ARGS__
 #define CFG_DHCP6 0
@@ -206,6 +218,8 @@
 #define USE_FTPGET(...)
 #define CFG_FTPPUT 0
 #define USE_FTPPUT(...)
+#define CFG_GETCONF 0
+#define USE_GETCONF(...)
 #define CFG_GETENFORCE 1
 #define USE_GETENFORCE(...) __VA_ARGS__
 #define CFG_GETFATTR 1
@@ -390,8 +404,8 @@
 #define USE_NOHUP(...) __VA_ARGS__
 #define CFG_NPROC 0
 #define USE_NPROC(...)
-#define CFG_NSENTER 0
-#define USE_NSENTER(...)
+#define CFG_NSENTER 1
+#define USE_NSENTER(...) __VA_ARGS__
 #define CFG_OD 1
 #define USE_OD(...) __VA_ARGS__
 #define CFG_ONEIT 0
@@ -410,8 +424,10 @@
 #define USE_PGREP(...) __VA_ARGS__
 #define CFG_PIDOF 1
 #define USE_PIDOF(...) __VA_ARGS__
-#define CFG_PING 0
-#define USE_PING(...)
+#define CFG_PING 1
+#define USE_PING(...) __VA_ARGS__
+#define CFG_PING6 1
+#define USE_PING6(...) __VA_ARGS__
 #define CFG_PIVOT_ROOT 1
 #define USE_PIVOT_ROOT(...) __VA_ARGS__
 #define CFG_PKILL 1
@@ -546,16 +562,8 @@
 #define USE_TELNETD(...)
 #define CFG_TELNET 0
 #define USE_TELNET(...)
-#define CFG_TEST_HUMAN_READABLE 0
-#define USE_TEST_HUMAN_READABLE(...)
 #define CFG_TEST 0
 #define USE_TEST(...)
-#define CFG_TEST_MANY_OPTIONS 0
-#define USE_TEST_MANY_OPTIONS(...)
-#define CFG_TEST_SCANKEY 0
-#define USE_TEST_SCANKEY(...)
-#define CFG_TEST_UTF8TOWC 0
-#define USE_TEST_UTF8TOWC(...)
 #define CFG_TFTPD 0
 #define USE_TFTPD(...)
 #define CFG_TFTP 0
@@ -592,10 +600,10 @@
 #define USE_UNIQ(...) __VA_ARGS__
 #define CFG_UNIX2DOS 1
 #define USE_UNIX2DOS(...) __VA_ARGS__
-#define CFG_UNLINK 0
-#define USE_UNLINK(...)
-#define CFG_UNSHARE 0
-#define USE_UNSHARE(...)
+#define CFG_UNLINK 1
+#define USE_UNLINK(...) __VA_ARGS__
+#define CFG_UNSHARE 1
+#define USE_UNSHARE(...) __VA_ARGS__
 #define CFG_UPTIME 1
 #define USE_UPTIME(...) __VA_ARGS__
 #define CFG_USERADD 0
@@ -608,6 +616,8 @@
 #define USE_UUDECODE(...) __VA_ARGS__
 #define CFG_UUENCODE 1
 #define USE_UUENCODE(...) __VA_ARGS__
+#define CFG_UUIDGEN 1
+#define USE_UUIDGEN(...) __VA_ARGS__
 #define CFG_VCONFIG 1
 #define USE_VCONFIG(...) __VA_ARGS__
 #define CFG_VI 0

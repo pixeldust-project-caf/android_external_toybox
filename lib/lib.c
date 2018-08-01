@@ -204,6 +204,12 @@ int mkpathat(int atfd, char *dir, mode_t lastmode, int flags)
   return 0;
 }
 
+// The common case
+int mkpath(char *dir)
+{
+  return mkpathat(AT_FDCWD, dir, 0, MKPATHAT_MAKE);
+}
+
 // Split a path into linked list of components, tracking head and tail of list.
 // Filters out // entries with no contents.
 struct string_list **splitpath(char *path, struct string_list **list)
@@ -301,11 +307,11 @@ long long atolx(char *numstr)
   val = xstrtol(numstr, &c, 0);
   if (c != numstr && *c && (end = strchr(suffixes, tolower(*c)))) {
     int shift = end-suffixes-2;
-
+    ++c;
     if (shift==-1) val *= 2;
-    if (!shift) val *= 512;
+    else if (!shift) val *= 512;
     else if (shift>0) {
-      if (toupper(*++c)=='d') while (shift--) val *= 1000;
+      if (*c && tolower(*c++)=='d') while (shift--) val *= 1000;
       else val *= 1LL<<(shift*10);
     }
   }
@@ -638,7 +644,7 @@ void loopfiles(char **argv, void (*function)(int fd, char *name))
   loopfiles_rw(argv, O_RDONLY|O_CLOEXEC|WARN_ONLY, 0, function);
 }
 
-// call loopfiles with do_lines()
+// glue to call dl_lines() from loopfiles
 static void (*do_lines_bridge)(char **pline, long len);
 static void loopfile_lines_bridge(int fd, char *name)
 {
@@ -700,18 +706,14 @@ static void tempfile_handler(void)
 int copy_tempfile(int fdin, char *name, char **tempname)
 {
   struct stat statbuf;
-  int fd;
-  int ignored __attribute__((__unused__));
+  int fd = xtempfile(name, tempname), ignored __attribute__((__unused__));
 
-  *tempname = xmprintf("%s%s", name, "XXXXXX");
-  if(-1 == (fd = mkstemp(*tempname))) error_exit("no temp file");
+  // Record tempfile for exit cleanup if interrupted
   if (!tempfile2zap) sigatexit(tempfile_handler);
   tempfile2zap = *tempname;
 
-  // Set permissions of output file (ignoring errors, usually due to nonroot)
-
-  fstat(fdin, &statbuf);
-  fchmod(fd, statbuf.st_mode);
+  // Set permissions of output file.
+  if (!fstat(fdin, &statbuf)) fchmod(fd, statbuf.st_mode);
 
   // We chmod before chown, which strips the suid bit. Caller has to explicitly
   // switch it back on if they want to keep suid.
@@ -848,14 +850,20 @@ void exit_signal(int sig)
 // adds the handlers to a list, to be called in order.
 void sigatexit(void *handler)
 {
-  struct arg_list *al = xmalloc(sizeof(struct arg_list));
+  struct arg_list *al;
   int i;
 
   for (i=0; signames[i].num != SIGCHLD; i++)
-    signal(signames[i].num, exit_signal);
-  al->next = toys.xexit;
-  al->arg = handler;
-  toys.xexit = al;
+    signal(signames[i].num, handler ? exit_signal : SIG_DFL);
+  if (handler) {
+    al = xmalloc(sizeof(struct arg_list));
+    al->next = toys.xexit;
+    al->arg = handler;
+    toys.xexit = al;
+  } else {
+    llist_traverse(toys.xexit, free);
+    toys.xexit = 0;
+  }
 }
 
 // Convert name to signal number.  If name == NULL print names.
@@ -1000,6 +1008,17 @@ void mode_to_string(mode_t mode, char *buf)
   *buf = c;
 }
 
+// dirname() can modify its argument or return a pointer to a constant string
+// This always returns a malloc() copy of everyting before last (run of ) '/'.
+char *getdirname(char *name)
+{
+  char *s = xstrdup(name), *ss = strrchr(s, '/');
+
+  while (*ss && *ss == '/' && s != ss) *ss-- = 0;
+
+  return s;
+}
+
 // basename() can modify its argument or return a pointer to a constant string
 // This just gives after the last '/' or the whole stirng if no /
 char *getbasename(char *name)
@@ -1009,6 +1028,18 @@ char *getbasename(char *name)
   if (s) return s+1;
 
   return name;
+}
+
+// Is this file under this directory?
+int fileunderdir(char *file, char *dir)
+{
+  char *s1 = xabspath(dir, 1), *s2 = xabspath(file, -1), *ss = s2;
+  int rc = s1 && s2 && strstart(&ss, s1) && (!s1[1] || s2[strlen(s1)] == '/');
+
+  free(s1);
+  free(s2);
+
+  return rc;
 }
 
 // Execute a callback for each PID that matches a process name from a list.
@@ -1049,7 +1080,7 @@ void names_to_pid(char **names, int (*callback)(pid_t pid, char *name))
         char buf[32];
 
         sprintf(buf, "/proc/%u/exe", u);
-        if (stat(buf, &st1)) continue;
+        if (stat(buf, &st2)) continue;
         if (st1.st_dev != st2.st_dev || st1.st_ino != st2.st_ino) continue;
         goto match;
       }
@@ -1113,29 +1144,20 @@ int qstrcmp(const void *a, const void *b)
   return strcmp(*(char **)a, *(char **)b);
 }
 
-// According to http://www.opengroup.org/onlinepubs/9629399/apdxa.htm
-// we should generate a uuid structure by reading a clock with 100 nanosecond
-// precision, normalizing it to the start of the gregorian calendar in 1582,
-// and looking up our eth0 mac address.
-//
-// On the other hand, we have 128 bits to come up with a unique identifier, of
-// which 6 have a defined value.  /dev/urandom it is.
-
+// See https://tools.ietf.org/html/rfc4122, specifically section 4.4
+// "Algorithms for Creating a UUID from Truly Random or Pseudo-Random
+// Numbers".
 void create_uuid(char *uuid)
 {
-  // Read 128 random bits
-  int fd = xopenro("/dev/urandom");
-  xreadall(fd, uuid, 16);
-  close(fd);
+  // "Set all the ... bits to randomly (or pseudo-randomly) chosen values".
+  xgetrandom(uuid, 16, 0);
 
-  // Claim to be a DCE format UUID.
+  // "Set the four most significant bits ... of the time_hi_and_version
+  // field to the 4-bit version number [4]".
   uuid[6] = (uuid[6] & 0x0F) | 0x40;
+  // "Set the two most significant bits (bits 6 and 7) of
+  // clock_seq_hi_and_reserved to zero and one, respectively".
   uuid[8] = (uuid[8] & 0x3F) | 0x80;
-
-  // rfc2518 section 6.4.1 suggests if we're not using a macaddr, we should
-  // set bit 1 of the node ID, which is the mac multicast bit.  This means we
-  // should never collide with anybody actually using a macaddr.
-  uuid[11] |= 128;
 }
 
 char *show_uuid(char *uuid)
@@ -1199,51 +1221,59 @@ struct passwd *bufgetpwuid(uid_t uid)
   struct pwuidbuf_list {
     struct pwuidbuf_list *next;
     struct passwd pw;
-  } *list;
+  } *list = 0;
   struct passwd *temp;
   static struct pwuidbuf_list *pwuidbuf;
+  unsigned size = 256;
 
+  // If we already have this one, return it.
   for (list = pwuidbuf; list; list = list->next)
     if (list->pw.pw_uid == uid) return &(list->pw);
 
-  list = xmalloc(512);
-  list->next = pwuidbuf;
+  for (;;) {
+    list = xrealloc(list, size *= 2);
+    errno = getpwuid_r(uid, &list->pw, sizeof(*list)+(char *)list,
+      size-sizeof(*list), &temp);
+    if (errno != ERANGE) break;
+  }
 
-  errno = getpwuid_r(uid, &list->pw, sizeof(*list)+(char *)list,
-    512-sizeof(*list), &temp);
   if (!temp) {
     free(list);
 
     return 0;
   }
+  list->next = pwuidbuf;
   pwuidbuf = list;
 
   return &list->pw;
 }
 
-// Return cached passwd entries.
+// Return cached group entries.
 struct group *bufgetgrgid(gid_t gid)
 {
   struct grgidbuf_list {
     struct grgidbuf_list *next;
     struct group gr;
-  } *list;
+  } *list = 0;
   struct group *temp;
   static struct grgidbuf_list *grgidbuf;
+  unsigned size = 256;
 
   for (list = grgidbuf; list; list = list->next)
     if (list->gr.gr_gid == gid) return &(list->gr);
 
-  list = xmalloc(512);
-  list->next = grgidbuf;
-
-  errno = getgrgid_r(gid, &list->gr, sizeof(*list)+(char *)list,
-    512-sizeof(*list), &temp);
+  for (;;) {
+    list = xrealloc(list, size *= 2);
+    errno = getgrgid_r(gid, &list->gr, sizeof(*list)+(char *)list,
+      size-sizeof(*list), &temp);
+    if (errno != ERANGE) break;
+  }
   if (!temp) {
     free(list);
 
     return 0;
   }
+  list->next = grgidbuf;
   grgidbuf = list;
 
   return &list->gr;
@@ -1326,6 +1356,7 @@ char *getgroupname(gid_t gid)
 // Iterate over lines in file, calling function. Function can write 0 to
 // the line pointer if they want to keep it, or 1 to terminate processing,
 // otherwise line is freed. Passed file descriptor is closed at the end.
+// At EOF calls function(0, 0)
 void do_lines(int fd, void (*call)(char **pline, long len))
 {
   FILE *fp = fd ? xfdopen(fd, "r") : stdin;
@@ -1341,6 +1372,7 @@ void do_lines(int fd, void (*call)(char **pline, long len))
       free(line);
     } else break;
   }
+  call(0, 0);
 
   if (fd) fclose(fp);
 }
@@ -1365,4 +1397,13 @@ long long millitime(void)
 
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return ts.tv_sec*1000+ts.tv_nsec/1000000;
+}
+
+// Formats `ts` in ISO format ("2018-06-28 15:08:58.846386216 -0700").
+char *format_iso_time(char *buf, size_t len, struct timespec *ts)
+{
+  strftime(buf, len, "%F %T", localtime(&(ts->tv_sec)));
+  sprintf(buf+strlen(buf), ".%09ld ", ts->tv_nsec);
+  strftime(buf+strlen(buf), len-strlen(buf), "%z", localtime(&(ts->tv_sec)));
+  return buf;
 }

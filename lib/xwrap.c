@@ -46,12 +46,13 @@ void xexit(void)
 {
   // Call toys.xexit functions in reverse order added.
   while (toys.xexit) {
-    // This is typecasting xexit->arg to a function pointer,then calling it.
-    // Using the invalid signal number 0 lets the signal handlers distinguish
-    // an actual signal from a regular exit.
-    ((void (*)(int))(toys.xexit->arg))(0);
+    struct arg_list *al = llist_pop(&toys.xexit);
 
-    free(llist_pop(&toys.xexit));
+    // typecast xexit->arg to a function pointer, then call it using invalid
+    // signal 0 to let signal handlers tell actual signal from regular exit.
+    ((void (*)(int))(al->arg))(0);
+
+    free(al);
   }
   if (fflush(NULL) || ferror(stdout))
     if (!toys.exitval) perror_msg("write");
@@ -377,6 +378,16 @@ int notstdio(int fd)
   return fd;
 }
 
+int xtempfile(char *name, char **tempname)
+{
+  int fd;
+
+   *tempname = xmprintf("%s%s", name, "XXXXXX");
+  if(-1 == (fd = mkstemp(*tempname))) error_exit("no temp file");
+
+  return fd;
+}
+
 // Create a file but don't return stdin/stdout/stderr
 int xcreate(char *path, int flags, int mode)
 {
@@ -471,7 +482,7 @@ void xstat(char *path, struct stat *st)
 char *xabspath(char *path, int exact)
 {
   struct string_list *todo, *done = 0;
-  int try = 9999, dirfd = open("/", 0);;
+  int try = 9999, dirfd = open("/", 0), missing = 0;
   char *ret;
 
   // If this isn't an absolute path, start with cwd.
@@ -482,11 +493,12 @@ char *xabspath(char *path, int exact)
     free(temp);
   } else splitpath(path, &todo);
 
-  // Iterate through path components
+  // Iterate through path components in todo, prepend processed ones to done.
   while (todo) {
     struct string_list *new = llist_pop(&todo), **tail;
     ssize_t len;
 
+    // Eventually break out of endless loops
     if (!try--) {
       errno = ELOOP;
       goto error;
@@ -497,29 +509,37 @@ char *xabspath(char *path, int exact)
       int x = new->str[1];
 
       free(new);
-      if (x) {
-        if (done) free(llist_pop(&done));
-        len = 0;
-      } else continue;
+      if (!x) continue;
+      if (done) free(llist_pop(&done));
+      len = 0;
+
+      if (missing) missing--;
+      else {
+        if (-1 == (x = openat(dirfd, "..", 0))) goto error;
+        close(dirfd);
+        dirfd = x;
+      }
+      continue;
+    }
 
     // Is this a symlink?
-    } else len = readlinkat(dirfd, new->str, libbuf, sizeof(libbuf));
-
+    len = readlinkat(dirfd, new->str, libbuf, sizeof(libbuf));
     if (len>4095) goto error;
+
+    // Not a symlink: add to linked list, move dirfd, fail if error
     if (len<1) {
       int fd;
-      char *s = "..";
 
-      // For .. just move dirfd
-      if (len) {
-        // Not a symlink: add to linked list, move dirfd, fail if error
-        if ((exact || todo) && errno != EINVAL) goto error;
-        new->next = done;
-        done = new;
-        if (errno == EINVAL && !todo) break;
-        s = new->str;
+      new->next = done;
+      done = new;
+      if (errno == EINVAL && !todo) break;
+      if (errno == ENOENT && exact<0) {
+        missing++;
+        continue;
       }
-      fd = openat(dirfd, s, 0);
+      if (errno != EINVAL && (exact || todo)) goto error;
+
+      fd = openat(dirfd, new->str, 0);
       if (fd == -1 && (exact || todo || errno != ENOENT)) goto error;
       close(dirfd);
       dirfd = fd;
@@ -578,7 +598,7 @@ error:
   llist_traverse(todo, free);
   llist_traverse(done, free);
 
-  return NULL;
+  return 0;
 }
 
 void xchdir(char *path)
@@ -773,15 +793,19 @@ long xparsetime(char *arg, long units, long *fraction)
 {
   double d;
   long l;
+  char *end;
 
-  if (CFG_TOYBOX_FLOAT) d = strtod(arg, &arg);
-  else l = strtoul(arg, &arg, 10);
+  if (CFG_TOYBOX_FLOAT) d = strtod(arg, &end);
+  else l = strtoul(arg, &end, 10);
+
+  if (end == arg) error_exit("Not a number '%s'", arg);
+  arg = end;
 
   // Parse suffix
   if (*arg) {
     int ismhd[]={1,60,3600,86400}, i = stridx("smhd", *arg);
 
-    if (i == -1) error_exit("Unknown suffix '%c'", *arg);
+    if (i == -1 || *(arg+1)) error_exit("Unknown suffix '%s'", arg);
     if (CFG_TOYBOX_FLOAT) d *= ismhd[i];
     else l *= ismhd[i];
   }
