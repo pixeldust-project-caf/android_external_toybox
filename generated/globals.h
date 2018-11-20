@@ -190,18 +190,12 @@ struct netstat_data {
 // toys/net/ping.c
 
 struct ping_data {
-  long w;
-  long W;
-  char *i;
+  long w, W, i;
   char *I;
-  long s;
-  long c;
-  long t;
-  long m;
+  long s, c, t, m;
 
   struct sockaddr *sa;
   int sock;
-  long i_ms;
   unsigned long sent, recv, fugit, min, max;
 };
 
@@ -332,18 +326,15 @@ struct makedevs_data {
 // toys/other/mix.c
 
 struct mix_data {
-   long right;
-   long level;
-   char *dev;
-   char *chan;
+   long r, l;
+   char *d, *c;
 };
 
 // toys/other/mkpasswd.c
 
 struct mkpasswd_data {
-  long pfd;
-  char *method;
-  char *salt;
+  long P;
+  char *m, *S;
 };
 
 // toys/other/mkswap.c
@@ -355,9 +346,7 @@ struct mkswap_data {
 // toys/other/modinfo.c
 
 struct modinfo_data {
-  char *field;
-  char *knam;
-  char *base;
+  char *F, *k, *b;
 
   long mod;
 };
@@ -372,7 +361,7 @@ struct nsenter_data {
 // toys/other/oneit.c
 
 struct oneit_data {
-  char *console;
+  char *c;
 };
 
 // toys/other/setfattr.c
@@ -384,15 +373,13 @@ struct setfattr_data {
 // toys/other/shred.c
 
 struct shred_data {
-  long offset;
-  long iterations;
-  long size;
+  long o, n, s;
 };
 
 // toys/other/stat.c
 
 struct stat_data {
-  char *fmt;
+  char *c;
 
   union {
     struct stat st;
@@ -405,13 +392,13 @@ struct stat_data {
 // toys/other/swapon.c
 
 struct swapon_data {
-  long priority;
+  long p;
 };
 
 // toys/other/switch_root.c
 
 struct switch_root_data {
-  char *console;
+  char *c;
 
   dev_t rootdev;
 };
@@ -419,8 +406,7 @@ struct switch_root_data {
 // toys/other/timeout.c
 
 struct timeout_data {
-  char *s_signal;
-  char *k_timeout;
+  char *s, *k;
 
   int nextsig;
   pid_t pid;
@@ -437,14 +423,18 @@ struct truncate_data {
   int type;
 };
 
+// toys/other/watch.c
+
+struct watch_data {
+  int n;
+
+  pid_t pid, oldpid;
+};
+
 // toys/other/xxd.c
 
 struct xxd_data {
-  long s;
-  long g;
-  long o;
-  long l;
-  long c;
+  long s, g, o, l, c;
 };
 
 // toys/pending/arp.c
@@ -948,14 +938,6 @@ struct vi_data {
   char *statline;
 };
 
-// toys/pending/watch.c
-
-struct watch_data {
-  int n;
-
-  pid_t pid, oldpid;
-};
-
 // toys/pending/wget.c
 
 struct wget_data {
@@ -1091,14 +1073,8 @@ struct find_data {
 // toys/posix/grep.c
 
 struct grep_data {
-  long m;
-  struct arg_list *f;
-  struct arg_list *e;
-  long a;
-  long b;
-  long c;
-  struct arg_list *M;
-  struct arg_list *S;
+  long m, A, B, C;
+  struct arg_list *f, *e, *M, *S;
 
   char indelim, outdelim;
   int found;
@@ -1225,12 +1201,8 @@ struct ps_data {
       struct arg_list *G, *g, *U, *u, *t, *s, *p, *O, *o, *P, *k;
     } ps;
     struct {
-      long n, m;
-      char *d;
-      long s;
+      long n, m, d, s;
       struct arg_list *u, *p, *o, *k, *O;
-
-      long d_ms;
     } top;
     struct {
       char *L;
@@ -1332,9 +1304,8 @@ struct ulimit_data {
 // toys/posix/uniq.c
 
 struct uniq_data {
-  long maxchars;
-  long nchars;
-  long nfields;
+  long w, s, f;
+
   long repeats;
 };
 
@@ -1412,6 +1383,7 @@ extern union global_union {
 	struct switch_root_data switch_root;
 	struct timeout_data timeout;
 	struct truncate_data truncate;
+	struct watch_data watch;
 	struct xxd_data xxd;
 	struct arp_data arp;
 	struct arping_data arping;
@@ -1460,7 +1432,6 @@ extern union global_union {
 	struct traceroute_data traceroute;
 	struct useradd_data useradd;
 	struct vi_data vi;
-	struct watch_data watch;
 	struct wget_data wget;
 	struct chgrp_data chgrp;
 	struct chmod_data chmod;
