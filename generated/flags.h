@@ -977,13 +977,14 @@
 #undef FLAG_P
 #endif
 
-// getconf   >2l
+// getconf   >2al
 #undef OPTSTR_getconf
-#define OPTSTR_getconf ">2l"
+#define OPTSTR_getconf ">2al"
 #ifdef CLEANUP_getconf
 #undef CLEANUP_getconf
 #undef FOR_getconf
 #undef FLAG_l
+#undef FLAG_a
 #endif
 
 // getenforce >0 >0
@@ -1033,14 +1034,17 @@
 #undef FLAG_t
 #endif
 
-// grep S(exclude)*M(include)*C#B#A#ZzEFHIabhinorsvwclqe*f*m#x[!wx][!EFw] S(exclude)*M(include)*C#B#A#ZzEFHIabhinorsvwclqe*f*m#x[!wx][!EFw]
+// grep S(exclude)*M(include)*ZzEFHIabhinorsvwclqe*f*C#B#A#m#x[!wx][!EFw] S(exclude)*M(include)*ZzEFHIabhinorsvwclqe*f*C#B#A#m#x[!wx][!EFw]
 #undef OPTSTR_grep
-#define OPTSTR_grep "S(exclude)*M(include)*C#B#A#ZzEFHIabhinorsvwclqe*f*m#x[!wx][!EFw]"
+#define OPTSTR_grep "S(exclude)*M(include)*ZzEFHIabhinorsvwclqe*f*C#B#A#m#x[!wx][!EFw]"
 #ifdef CLEANUP_grep
 #undef CLEANUP_grep
 #undef FOR_grep
 #undef FLAG_x
 #undef FLAG_m
+#undef FLAG_A
+#undef FLAG_B
+#undef FLAG_C
 #undef FLAG_f
 #undef FLAG_e
 #undef FLAG_q
@@ -1062,9 +1066,6 @@
 #undef FLAG_E
 #undef FLAG_z
 #undef FLAG_Z
-#undef FLAG_A
-#undef FLAG_B
-#undef FLAG_C
 #undef FLAG_include
 #undef FLAG_M
 #undef FLAG_exclude
@@ -1369,9 +1370,9 @@
 #undef FOR_iorenice
 #endif
 
-// iotop >0AaKOHk*o*p*u*s#<1=7d:m#n#<1bq >0AaKOHk*o*p*u*s#<1=7d:m#n#<1bq
+// iotop >0AaKOHk*o*p*u*s#<1=7d%<100=3000m#n#<1bq >0AaKOHk*o*p*u*s#<1=7d%<100=3000m#n#<1bq
 #undef OPTSTR_iotop
-#define OPTSTR_iotop ">0AaKOHk*o*p*u*s#<1=7d:m#n#<1bq"
+#define OPTSTR_iotop ">0AaKOHk*o*p*u*s#<1=7d%<100=3000m#n#<1bq"
 #ifdef CLEANUP_iotop
 #undef CLEANUP_iotop
 #undef FOR_iotop
@@ -2112,9 +2113,9 @@
 #undef FLAG_s
 #endif
 
-// ping <1>1m#t#<0>255=64c#<0=3s#<0>4088=56I:i:W#<0=3w#<0qf46[-46] <1>1m#t#<0>255=64c#<0=3s#<0>4088=56I:i:W#<0=3w#<0qf46[-46]
+// ping <1>1m#t#<0>255=64c#<0=3s#<0>4088=56I:i%W#<0=3w#<0qf46[-46] <1>1m#t#<0>255=64c#<0=3s#<0>4088=56I:i%W#<0=3w#<0qf46[-46]
 #undef OPTSTR_ping
-#define OPTSTR_ping "<1>1m#t#<0>255=64c#<0=3s#<0>4088=56I:i:W#<0=3w#<0qf46[-46]"
+#define OPTSTR_ping "<1>1m#t#<0>255=64c#<0=3s#<0>4088=56I:i%W#<0=3w#<0qf46[-46]"
 #ifdef CLEANUP_ping
 #undef CLEANUP_ping
 #undef FOR_ping
@@ -2889,9 +2890,9 @@
 #undef FLAG_v
 #endif
 
-// top >0O*Hk*o*p*u*s#<1d:m#n#<1bq[!oO] >0O*Hk*o*p*u*s#<1d:m#n#<1bq[!oO]
+// top >0O*Hk*o*p*u*s#<1d%<100=3000m#n#<1bq[!oO] >0O*Hk*o*p*u*s#<1d%<100=3000m#n#<1bq[!oO]
 #undef OPTSTR_top
-#define OPTSTR_top ">0O*Hk*o*p*u*s#<1d:m#n#<1bq[!oO]"
+#define OPTSTR_top ">0O*Hk*o*p*u*s#<1d%<100=3000m#n#<1bq[!oO]"
 #ifdef CLEANUP_top
 #undef CLEANUP_top
 #undef FOR_top
@@ -3231,9 +3232,9 @@
 #undef FOR_w
 #endif
 
-// watch   ^<1n#<100=2000tebx
+// watch   ^<1n%<100=2000tebx
 #undef OPTSTR_watch
-#define OPTSTR_watch "^<1n#<100=2000tebx"
+#define OPTSTR_watch "^<1n%<100=2000tebx"
 #ifdef CLEANUP_watch
 #undef CLEANUP_watch
 #undef FOR_watch
@@ -4180,6 +4181,7 @@
 #define TT this.getconf
 #endif
 #define FLAG_l (FORCED_FLAG<<0)
+#define FLAG_a (FORCED_FLAG<<1)
 #endif
 
 #ifdef FOR_getenforce
@@ -4227,30 +4229,30 @@
 #endif
 #define FLAG_x (1<<0)
 #define FLAG_m (1<<1)
-#define FLAG_f (1<<2)
-#define FLAG_e (1<<3)
-#define FLAG_q (1<<4)
-#define FLAG_l (1<<5)
-#define FLAG_c (1<<6)
-#define FLAG_w (1<<7)
-#define FLAG_v (1<<8)
-#define FLAG_s (1<<9)
-#define FLAG_r (1<<10)
-#define FLAG_o (1<<11)
-#define FLAG_n (1<<12)
-#define FLAG_i (1<<13)
-#define FLAG_h (1<<14)
-#define FLAG_b (1<<15)
-#define FLAG_a (1<<16)
-#define FLAG_I (1<<17)
-#define FLAG_H (1<<18)
-#define FLAG_F (1<<19)
-#define FLAG_E (1<<20)
-#define FLAG_z (1<<21)
-#define FLAG_Z (1<<22)
-#define FLAG_A (1<<23)
-#define FLAG_B (1<<24)
-#define FLAG_C (1<<25)
+#define FLAG_A (1<<2)
+#define FLAG_B (1<<3)
+#define FLAG_C (1<<4)
+#define FLAG_f (1<<5)
+#define FLAG_e (1<<6)
+#define FLAG_q (1<<7)
+#define FLAG_l (1<<8)
+#define FLAG_c (1<<9)
+#define FLAG_w (1<<10)
+#define FLAG_v (1<<11)
+#define FLAG_s (1<<12)
+#define FLAG_r (1<<13)
+#define FLAG_o (1<<14)
+#define FLAG_n (1<<15)
+#define FLAG_i (1<<16)
+#define FLAG_h (1<<17)
+#define FLAG_b (1<<18)
+#define FLAG_a (1<<19)
+#define FLAG_I (1<<20)
+#define FLAG_H (1<<21)
+#define FLAG_F (1<<22)
+#define FLAG_E (1<<23)
+#define FLAG_z (1<<24)
+#define FLAG_Z (1<<25)
 #define FLAG_include (1<<26)
 #define FLAG_M (1<<26)
 #define FLAG_exclude (1<<27)
