@@ -7,13 +7,22 @@
 // For musl
 #define _ALL_SOURCE
 
+#ifdef __APPLE__
+// macOS 10.13 doesn't have the POSIX 2008 direct access to timespec in
+// struct stat, but we can ask it to give us something equivalent...
+// (This must come before any #include!)
+#define _DARWIN_C_SOURCE
+// ...and then use macros to paper over the difference.
+#define st_atim st_atimespec
+#define st_ctim st_ctimespec
+#define st_mtim st_mtimespec
+#endif
+
 // Test for gcc (using compiler builtin #define)
 
 #ifdef __GNUC__
-#define noreturn	__attribute__((noreturn))
 #define printf_format	__attribute__((format(printf, 1, 2)))
 #else
-#define noreturn
 #define printf_format
 #endif
 
@@ -22,9 +31,10 @@
 
 // This isn't in the spec, but it's how we determine what libc we're using.
 
-#include <features.h>
-
-// Types various replacement prototypes need
+// Types various replacement prototypes need.
+// This also lets us determine what libc we're using. Systems that
+// have <features.h> will transitively include it, and ones that don't --
+// macOS -- won't break.
 #include <sys/types.h>
 
 // Various constants old build environments might not have even if kernel does
@@ -89,43 +99,8 @@ char *strptime(const char *buf, const char *format, struct tm *tm);
 char *dirname(char *path);
 char *__xpg_basename(char *path);
 static inline char *basename(char *path) { return __xpg_basename(path); }
-
-// When building under obsolete glibc (Ubuntu 8.04-ish), hold its hand a bit.
-#if __GLIBC__ == 2 && __GLIBC_MINOR__ < 10
-#define fstatat fstatat64
-int fstatat64(int dirfd, const char *pathname, void *buf, int flags);
-int readlinkat(int dirfd, const char *pathname, char *buf, size_t bufsiz);
-char *stpcpy(char *dest, const char *src);
-#include <sys/stat.h>
-int fchmodat(int dirfd, const char *pathname, mode_t mode, int flags);
-int openat(int dirfd, const char *pathname, int flags, ...);
-#include <dirent.h>
-DIR *fdopendir(int fd);
-#include <unistd.h>
-int fchownat(int dirfd, const char *pathname,
-                    uid_t owner, gid_t group, int flags);
-int isblank(int c);
-int unlinkat(int dirfd, const char *pathname, int flags);
-#include <stdio.h>
-ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *stream);
-
-// Straight from posix-2008, things old glibc had but didn't prototype
-
-int faccessat(int fd, const char *path, int amode, int flag);
-int linkat(int fd1, const char *path1, int fd2, const char *path2, int flag);
-int mkdirat(int fd, const char *path, mode_t mode);
-int symlinkat(const char *path1, int fd, const char *path2);
-int mknodat(int fd, const char *path, mode_t mode, dev_t dev);
-#include <sys/time.h>
-int futimens(int fd, const struct timespec times[2]);
-int utimensat(int fd, const char *path, const struct timespec times[2], int flag);
-
-#ifndef MNT_DETACH
-#define MNT_DETACH 2
-#endif
-#endif // Old glibc
-
-#endif // glibc in general
+char *strcasestr(const char *haystack, const char *needle);
+#endif // defined(glibc)
 
 #if !defined(__GLIBC__)
 // POSIX basename.
@@ -134,20 +109,28 @@ int utimensat(int fd, const char *path, const struct timespec times[2], int flag
 
 // Work out how to do endianness
 
-#ifndef __APPLE__
-#include <byteswap.h>
-#include <endian.h>
+#ifdef __APPLE__
 
-#if __BYTE_ORDER == __BIG_ENDIAN
+#include <libkern/OSByteOrder.h>
+
+#ifdef __BIG_ENDIAN__
 #define IS_BIG_ENDIAN 1
 #else
 #define IS_BIG_ENDIAN 0
 #endif
 
+#define bswap_16(x) OSSwapInt16(x)
+#define bswap_32(x) OSSwapInt32(x)
+#define bswap_64(x) OSSwapInt64(x)
+
 int clearenv(void);
+
 #else
 
-#ifdef __BIG_ENDIAN__
+#include <byteswap.h>
+#include <endian.h>
+
+#if __BYTE_ORDER == __BIG_ENDIAN
 #define IS_BIG_ENDIAN 1
 #else
 #define IS_BIG_ENDIAN 0
@@ -173,15 +156,19 @@ int clearenv(void);
 #define SWAP_LE64(x) (x)
 #endif
 
-#if defined(__APPLE__) \
-    || (defined(__GLIBC__) && __GLIBC__ == 2 && __GLIBC_MINOR__ < 10)
-ssize_t getdelim(char **lineptr, size_t *n, int delim, FILE *stream);
-ssize_t getline(char **lineptr, size_t *n, FILE *stream);
-#endif
-
 // Linux headers not listed by POSIX or LSB
 #include <sys/mount.h>
+#ifdef __linux__
+#include <sys/statfs.h>
 #include <sys/swap.h>
+#include <sys/sysinfo.h>
+#endif
+
+#ifdef __APPLE__
+#include <util.h>
+#else
+#include <pty.h>
+#endif
 
 // Android is missing some headers and functions
 // "generated/config.h" is included first
@@ -290,7 +277,7 @@ extern CODE prioritynames[], facilitynames[];
 #if CFG_TOYBOX_GETRANDOM
 #include <sys/random.h>
 #endif
-void xgetrandom(void *buf, unsigned len, unsigned flags);
+int xgetrandom(void *buf, unsigned len, unsigned flags);
 
 // Android's bionic libc doesn't have confstr.
 #ifdef __BIONIC__

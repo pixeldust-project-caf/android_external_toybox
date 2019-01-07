@@ -981,7 +981,7 @@
 #undef FLAG_P
 #endif
 
-// getconf   >2al
+// getconf >2al >2al
 #undef OPTSTR_getconf
 #define OPTSTR_getconf ">2al"
 #ifdef CLEANUP_getconf
@@ -1144,15 +1144,17 @@
 #undef FLAG_c
 #endif
 
-// head ?n#<0=10c#<0qv[-nc] ?n#<0=10c#<0qv[-nc]
+// head ?n(lines)#<0=10c(bytes)#<0qv[-nc] ?n(lines)#<0=10c(bytes)#<0qv[-nc]
 #undef OPTSTR_head
-#define OPTSTR_head "?n#<0=10c#<0qv[-nc]"
+#define OPTSTR_head "?n(lines)#<0=10c(bytes)#<0qv[-nc]"
 #ifdef CLEANUP_head
 #undef CLEANUP_head
 #undef FOR_head
 #undef FLAG_v
 #undef FLAG_q
+#undef FLAG_bytes
 #undef FLAG_c
+#undef FLAG_lines
 #undef FLAG_n
 #endif
 
@@ -1280,7 +1282,7 @@
 #undef FLAG_f
 #endif
 
-// iconv   cst:f:
+// iconv cst:f: cst:f:
 #undef OPTSTR_iconv
 #define OPTSTR_iconv "cst:f:"
 #ifdef CLEANUP_iconv
@@ -1795,12 +1797,13 @@
 #undef FLAG_L
 #endif
 
-// mktemp >1uqd(directory)p(tmpdir): >1uqd(directory)p(tmpdir):
+// mktemp >1uqd(directory)p(tmpdir):t >1uqd(directory)p(tmpdir):t
 #undef OPTSTR_mktemp
-#define OPTSTR_mktemp ">1uqd(directory)p(tmpdir):"
+#define OPTSTR_mktemp ">1uqd(directory)p(tmpdir):t"
 #ifdef CLEANUP_mktemp
 #undef CLEANUP_mktemp
 #undef FOR_mktemp
+#undef FLAG_t
 #undef FLAG_tmpdir
 #undef FLAG_p
 #undef FLAG_directory
@@ -1898,12 +1901,15 @@
 #undef FLAG_n
 #endif
 
-// netcat ^tlLw#<1W#<1p#<1>65535q#<1s:f:[!tlL][!Lw] ^tlLw#<1W#<1p#<1>65535q#<1s:f:[!tlL][!Lw]
+// netcat ^tlLw#<1W#<1p#<1>65535q#<1s:f:46u[!tlL][!Lw][!46] ^tlLw#<1W#<1p#<1>65535q#<1s:f:46u[!tlL][!Lw][!46]
 #undef OPTSTR_netcat
-#define OPTSTR_netcat "^tlLw#<1W#<1p#<1>65535q#<1s:f:[!tlL][!Lw]"
+#define OPTSTR_netcat "^tlLw#<1W#<1p#<1>65535q#<1s:f:46u[!tlL][!Lw][!46]"
 #ifdef CLEANUP_netcat
 #undef CLEANUP_netcat
 #undef FOR_netcat
+#undef FLAG_u
+#undef FLAG_6
+#undef FLAG_4
 #undef FLAG_f
 #undef FLAG_s
 #undef FLAG_q
@@ -1966,7 +1972,7 @@
 #undef FOR_nohup
 #endif
 
-// nproc   (all)
+// nproc (all) (all)
 #undef OPTSTR_nproc
 #define OPTSTR_nproc "(all)"
 #ifdef CLEANUP_nproc
@@ -2391,9 +2397,9 @@
 #undef FOR_runcon
 #endif
 
-// sed (help)(version)e*f*inEr[+Er] (help)(version)e*f*inEr[+Er]
+// sed (help)(version)e*f*i:;nEr[+Er] (help)(version)e*f*i:;nEr[+Er]
 #undef OPTSTR_sed
-#define OPTSTR_sed "(help)(version)e*f*inEr[+Er]"
+#define OPTSTR_sed "(help)(version)e*f*i:;nEr[+Er]"
 #ifdef CLEANUP_sed
 #undef CLEANUP_sed
 #undef FOR_sed
@@ -3243,7 +3249,7 @@
 #undef FOR_w
 #endif
 
-// watch   ^<1n%<100=2000tebx
+// watch ^<1n%<100=2000tebx ^<1n%<100=2000tebx
 #undef OPTSTR_watch
 #define OPTSTR_watch "^<1n%<100=2000tebx"
 #ifdef CLEANUP_watch
@@ -4195,8 +4201,8 @@
 #ifndef TT
 #define TT this.getconf
 #endif
-#define FLAG_l (FORCED_FLAG<<0)
-#define FLAG_a (FORCED_FLAG<<1)
+#define FLAG_l (1<<0)
+#define FLAG_a (1<<1)
 #endif
 
 #ifdef FOR_getenforce
@@ -4338,7 +4344,9 @@
 #endif
 #define FLAG_v (1<<0)
 #define FLAG_q (1<<1)
+#define FLAG_bytes (1<<2)
 #define FLAG_c (1<<2)
+#define FLAG_lines (1<<3)
 #define FLAG_n (1<<3)
 #endif
 
@@ -4448,10 +4456,10 @@
 #ifndef TT
 #define TT this.iconv
 #endif
-#define FLAG_f (FORCED_FLAG<<0)
-#define FLAG_t (FORCED_FLAG<<1)
-#define FLAG_s (FORCED_FLAG<<2)
-#define FLAG_c (FORCED_FLAG<<3)
+#define FLAG_f (1<<0)
+#define FLAG_t (1<<1)
+#define FLAG_s (1<<2)
+#define FLAG_c (1<<3)
 #endif
 
 #ifdef FOR_id
@@ -4877,12 +4885,13 @@
 #ifndef TT
 #define TT this.mktemp
 #endif
-#define FLAG_tmpdir (1<<0)
-#define FLAG_p (1<<0)
-#define FLAG_directory (1<<1)
-#define FLAG_d (1<<1)
-#define FLAG_q (1<<2)
-#define FLAG_u (1<<3)
+#define FLAG_t (1<<0)
+#define FLAG_tmpdir (1<<1)
+#define FLAG_p (1<<1)
+#define FLAG_directory (1<<2)
+#define FLAG_d (1<<2)
+#define FLAG_q (1<<3)
+#define FLAG_u (1<<4)
 #endif
 
 #ifdef FOR_modinfo
@@ -4964,15 +4973,18 @@
 #ifndef TT
 #define TT this.netcat
 #endif
-#define FLAG_f (1<<0)
-#define FLAG_s (1<<1)
-#define FLAG_q (1<<2)
-#define FLAG_p (1<<3)
-#define FLAG_W (1<<4)
-#define FLAG_w (1<<5)
-#define FLAG_L (1<<6)
-#define FLAG_l (1<<7)
-#define FLAG_t (1<<8)
+#define FLAG_u (1<<0)
+#define FLAG_6 (1<<1)
+#define FLAG_4 (1<<2)
+#define FLAG_f (1<<3)
+#define FLAG_s (1<<4)
+#define FLAG_q (1<<5)
+#define FLAG_p (1<<6)
+#define FLAG_W (1<<7)
+#define FLAG_w (1<<8)
+#define FLAG_L (1<<9)
+#define FLAG_l (1<<10)
+#define FLAG_t (1<<11)
 #endif
 
 #ifdef FOR_netstat
@@ -5022,7 +5034,7 @@
 #ifndef TT
 #define TT this.nproc
 #endif
-#define FLAG_all (FORCED_FLAG<<0)
+#define FLAG_all (1<<0)
 #endif
 
 #ifdef FOR_nsenter
@@ -6095,11 +6107,11 @@
 #ifndef TT
 #define TT this.watch
 #endif
-#define FLAG_x (FORCED_FLAG<<0)
-#define FLAG_b (FORCED_FLAG<<1)
-#define FLAG_e (FORCED_FLAG<<2)
-#define FLAG_t (FORCED_FLAG<<3)
-#define FLAG_n (FORCED_FLAG<<4)
+#define FLAG_x (1<<0)
+#define FLAG_b (1<<1)
+#define FLAG_e (1<<2)
+#define FLAG_t (1<<3)
+#define FLAG_n (1<<4)
 #endif
 
 #ifdef FOR_wc

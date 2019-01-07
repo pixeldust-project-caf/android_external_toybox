@@ -11,7 +11,7 @@
  *       What's the right thing to do for -i when write fails? Skip to next?
  * test '//q' with no previous regex, also repeat previous regex?
 
-USE_SED(NEWTOY(sed, "(help)(version)e*f*inEr[+Er]", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_LOCALE|TOYFLAG_NOHELP))
+USE_SED(NEWTOY(sed, "(help)(version)e*f*i:;nEr[+Er]", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_LOCALE|TOYFLAG_NOHELP))
 
 config SED
   bool "sed"
@@ -22,9 +22,9 @@ config SED
     Stream editor. Apply one or more editing SCRIPTs to each line of input
     (from FILE or stdin) producing output (by default to stdout).
 
-    -e	add SCRIPT to list
-    -f	add contents of SCRIPT_FILE to list
-    -i	Edit each file in place
+    -e	Add SCRIPT to list
+    -f	Add contents of SCRIPT_FILE to list
+    -i	Edit each file in place (-iEXT keeps backup file with extension EXT)
     -n	No default output (use the p command to output matched lines)
     -r	Use extended regular expression syntax
     -E	Alias for -r
@@ -170,6 +170,7 @@ config SED
 #include "toys.h"
 
 GLOBALS(
+  char *i;
   struct arg_list *f, *e;
 
   // processed pattern list
@@ -260,7 +261,7 @@ static void sed_line(char **pline, long plen)
   int eol = 0, tea = 0;
 
   // Ignore EOF for all files before last unless -i
-  if (!pline && !(toys.optflags&FLAG_i)) return;
+  if (!pline && !FLAG(i)) return;
 
   // Grab next line for deferred processing (EOF detection: we get a NULL
   // pline at EOF to flush last line). Note that only end of _last_ input
@@ -600,7 +601,7 @@ writenow:
     command = command->next;
   }
 
-  if (line && !(toys.optflags & FLAG_n)) emit(line, len, eol);
+  if (line && !FLAG(n)) emit(line, len, eol);
 
 done:
   if (dlist_terminate(append)) while (append) {
@@ -627,10 +628,9 @@ done:
 // Callback called on each input file
 static void do_sed_file(int fd, char *name)
 {
-  int i = toys.optflags & FLAG_i;
   char *tmp;
 
-  if (i) {
+  if (FLAG(i)) {
     struct sedcmd *command;
 
     if (!fd) return error_msg("-i on stdin");
@@ -640,7 +640,13 @@ static void do_sed_file(int fd, char *name)
       command->hit = 0;
   }
   do_lines(fd, sed_line);
-  if (i) {
+  if (FLAG(i)) {
+    if (TT.i && *TT.i) {
+      char *s = xmprintf("%s%s", name, TT.i);
+
+      xrename(name, s);
+      free(s);
+    }
     replace_tempfile(-1, TT.fdout, &tmp);
     TT.fdout = 1;
     TT.nextline = 0;
@@ -780,7 +786,7 @@ static void parse_pattern(char **pline, long len)
         if (!(s = unescape_delimited_string(&line, 0))) goto error;
         if (!*s) command->rmatch[i] = 0;
         else {
-          xregcomp((void *)reg, s, (toys.optflags & FLAG_r)*REG_EXTENDED);
+          xregcomp((void *)reg, s, FLAG(r)*REG_EXTENDED);
           command->rmatch[i] = reg-toybuf;
           reg += sizeof(regex_t);
         }
@@ -874,7 +880,7 @@ resume_s:
       // allocating the space was done by extend_string() above
       if (!*TT.remember) command->arg1 = 0;
       else xregcomp((void *)(command->arg1 + (char *)command), TT.remember,
-        ((toys.optflags & FLAG_r)*REG_EXTENDED)|((command->sflags&1)*REG_ICASE));
+        (FLAG(r)*REG_EXTENDED)|((command->sflags&1)*REG_ICASE));
       free(TT.remember);
       TT.remember = 0;
       if (*line == 'w') {
@@ -995,13 +1001,13 @@ void sed_main(void)
   // Lie to autoconf when it asks stupid questions, so configure regexes
   // that look for "GNU sed version %f" greater than some old buggy number
   // don't fail us for not matching their narrow expectations.
-  if (toys.optflags & FLAG_version) {
+  if (FLAG(version)) {
     xprintf("This is not GNU sed version 9.0\n");
     return;
   }
 
   // Handling our own --version means we handle our own --help too.
-  if (toys.optflags&FLAG_help) help_exit(0);
+  if (FLAG(help)) help_exit(0);
 
   // Parse pattern into commands.
 
@@ -1027,7 +1033,7 @@ void sed_main(void)
   loopfiles_rw(args, O_RDONLY|WARN_ONLY, 0, do_sed_file);
 
   // Provide EOF flush at end of cumulative input for non-i mode.
-  if (!(toys.optflags & FLAG_i)) {
+  if (!FLAG(i)) {
     toys.optflags |= FLAG_i;
     sed_line(0, 0);
   }
