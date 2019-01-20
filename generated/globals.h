@@ -1071,7 +1071,7 @@ struct grep_data {
   struct arg_list *f, *e, *M, *S;
 
   char indelim, outdelim;
-  int found;
+  int found, tried;
 };
 
 // toys/posix/head.c
@@ -1209,7 +1209,6 @@ struct ps_data {
     } pgrep;
   };
 
-  struct sysinfo si;
   struct ptr_len gg, GG, pp, PP, ss, tt, uu, UU;
   struct dirtree *threadparent;
   unsigned width, height;
@@ -1230,6 +1229,7 @@ struct renice_data {
 // toys/posix/sed.c
 
 struct sed_data {
+  char *i;
   struct arg_list *f, *e;
 
   // processed pattern list

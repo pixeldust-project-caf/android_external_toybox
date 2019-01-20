@@ -28,22 +28,22 @@ config CP
     Copy files from SOURCE to DEST.  If more than one SOURCE, DEST must
     be a directory.
 
-    -D	create leading dirs under DEST (--parents)
-    -f	delete destination files we can't write to
-    -F	delete any existing destination file first (--remove-destination)
-    -i	interactive, prompt before overwriting existing DEST
-    -p	preserve timestamps, ownership, and mode
-    -R	recurse into subdirectories (DEST must be a directory)
+    -D	Create leading dirs under DEST (--parents)
+    -f	Delete destination files we can't write to
+    -F	Delete any existing destination file first (--remove-destination)
+    -i	Interactive, prompt before overwriting existing DEST
+    -p	Preserve timestamps, ownership, and mode
+    -R	Recurse into subdirectories (DEST must be a directory)
     -H	Follow symlinks listed on command line
     -L	Follow all symlinks
     -P	Do not follow symlinks [default]
-    -a	same as -dpr
-    -d	don't dereference symlinks
-    -l	hard link instead of copy
-    -n	no clobber (don't overwrite DEST)
-    -r	synonym for -R
-    -s	symlink instead of copy
-    -v	verbose
+    -a	Same as -dpr
+    -d	Don't dereference symlinks
+    -l	Hard link instead of copy
+    -n	No clobber (don't overwrite DEST)
+    -r	Synonym for -R
+    -s	Symlink instead of copy
+    -v	Verbose
 
 config CP_PRESERVE
   bool "cp --preserve support"
@@ -68,10 +68,10 @@ config MV
   help
     usage: mv [-fivn] SOURCE... DEST"
 
-    -f	force copy by deleting destination file
-    -i	interactive, prompt before overwriting existing DEST
-    -v	verbose
-    -n	no clobber (don't overwrite DEST)
+    -f	Force copy by deleting destination file
+    -i	Interactive, prompt before overwriting existing DEST
+    -v	Verbose
+    -n	No clobber (don't overwrite DEST)
 
 config INSTALL
   bool "install"
@@ -369,13 +369,12 @@ void cp_main(void)
   if ((toys.optc>1 || (toys.optflags&FLAG_D)) && !destdir)
     error_exit("'%s' not directory", destname);
 
-  if (toys.optflags & (FLAG_a|FLAG_p)) {
+  if (toys.optflags & (FLAG_a|FLAG_p))
     TT.pflags = _CP_mode|_CP_ownership|_CP_timestamps;
-    umask(0);
-  }
+
   // Not using comma_args() (yet?) because interpeting as letters.
   if (CFG_CP_PRESERVE && (toys.optflags & FLAG_preserve)) {
-    char *pre = xstrdup(TT.c.preserve), *s;
+    char *pre = xstrdup(TT.c.preserve ? TT.c.preserve : "mot"), *s;
 
     if (comma_scan(pre, "all", 1)) TT.pflags = ~0;
     for (i=0; i<ARRAY_LEN(cp_preserve); i++)
@@ -383,7 +382,7 @@ void cp_main(void)
     if (*pre) {
 
       // Try to interpret as letters, commas won't set anything this doesn't.
-      for (s = TT.c.preserve; *s; s++) {
+      for (s = pre; *s; s++) {
         for (i=0; i<ARRAY_LEN(cp_preserve); i++)
           if (*s == *cp_preserve[i].name) break;
         if (i == ARRAY_LEN(cp_preserve)) {
@@ -396,6 +395,7 @@ void cp_main(void)
     }
     free(pre);
   }
+  if (TT.pflags & _CP_mode) umask(0);
   if (!TT.callback) TT.callback = cp_node;
 
   // Loop through sources
