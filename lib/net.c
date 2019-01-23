@@ -35,7 +35,7 @@ struct addrinfo *xgetaddrinfo(char *host, char *port, int family, int socktype,
   return ai;
 }
 
-int xconnect(struct addrinfo *ai_arg)
+int xconnbind(struct addrinfo *ai_arg, int dobind)
 {
   struct addrinfo *ai;
   int fd = -1;
@@ -44,8 +44,8 @@ int xconnect(struct addrinfo *ai_arg)
   for (ai = ai_arg; ai; ai = ai->ai_next) {
     fd = (ai->ai_next ? socket : xsocket)(ai->ai_family, ai->ai_socktype,
       ai->ai_protocol);
-    if (!connect(fd, ai->ai_addr, ai->ai_addrlen)) break;
-    else if (!ai->ai_next) perror_exit("connect");
+    if (!(dobind ? bind : connect)(fd, ai->ai_addr, ai->ai_addrlen)) break;
+    else if (!ai->ai_next) perror_exit_raw(dobind ? "bind" : "connect");
     close(fd);
   }
   freeaddrinfo(ai_arg);
@@ -53,34 +53,30 @@ int xconnect(struct addrinfo *ai_arg)
   return fd;
 }
 
-int xbind(struct addrinfo *ai_arg)
+int xconnect(struct addrinfo *ai)
 {
-  struct addrinfo *ai;
-  int fd = -1;
+  return xconnbind(ai, 0);
+}
 
-  // Try all the returned addresses. Report errors if last entry can't connect.
-  for (ai = ai_arg; ai; ai = ai->ai_next) {
-    fd = (ai->ai_next ? socket : xsocket)(ai->ai_family, ai->ai_socktype,
-      ai->ai_protocol);
-    if (!bind(fd, ai->ai_addr, ai->ai_addrlen)) break;
-    else if (!ai->ai_next) perror_exit("connect");
-    close(fd);
-  }
-  freeaddrinfo(ai_arg);
 
-  return fd;
+int xbind(struct addrinfo *ai)
+{
+  return xconnbind(ai, 1);
 }
 
 int xpoll(struct pollfd *fds, int nfds, int timeout)
 {
   int i;
+  long long now, then = timeout>0 ? millitime() : 0;
 
   for (;;) {
-    if (0>(i = poll(fds, nfds, timeout))) {
-      if (toys.signal) return i;
-      if (errno != EINTR && errno != ENOMEM) perror_exit("xpoll");
-      else if (timeout>0) timeout--;
-    } else return i;
+    if (0<=(i = poll(fds, nfds, timeout)) || toys.signal) return i;
+    if (errno != EINTR && errno != ENOMEM) perror_exit("xpoll");
+    else {
+      now = millitime();
+      timeout -= now-then;
+      then = now;
+    }
   }
 }
 
@@ -132,4 +128,13 @@ char *ntop(struct sockaddr *sa)
   inet_ntop(sa->sa_family, addr, libbuf, sizeof(libbuf));
 
   return libbuf;
+}
+
+void xsendto(int sockfd, void *buf, size_t len, struct sockaddr *dest)
+{
+  int rc = sendto(sockfd, buf, len, 0, dest,
+    dest->sa_family == AF_INET ? sizeof(struct sockaddr_in) :
+      sizeof(struct sockaddr_in6));
+
+  if (rc != len) perror_exit("sendto");
 }

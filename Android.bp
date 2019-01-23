@@ -236,6 +236,7 @@ cc_defaults {
         "-Wno-char-subscripts",
         "-Wno-deprecated-declarations",
         "-Wno-missing-field-initializers",
+        "-Wno-pointer-arith",
         "-Wno-sign-compare",
         "-Wno-string-plus-int",
         "-Wno-unused-parameter",
@@ -260,6 +261,7 @@ cc_defaults {
                 "acpi",
                 "base64",
                 "basename",
+                "bc",
                 "blockdev",
                 "cal",
                 "cat",
@@ -432,7 +434,11 @@ cc_defaults {
 toybox_libraries = [
     "liblog",
     "libselinux",
+    // libcutils dependency is needed only for <cutils/sched_policy.h>
+    // inclusion from lib/portability.h. When it's changed to include
+    // <processgroup/sched_policy.h> this dependency should be dropped
     "libcutils",
+    "libprocessgroup",
     "libcrypto",
     "libz",
 ]

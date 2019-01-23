@@ -125,6 +125,8 @@ char *xstrdup(char *s);
 void *xmemdup(void *s, long len);
 char *xmprintf(char *format, ...) printf_format;
 void xprintf(char *format, ...) printf_format;
+void xputsl(char *s, int len);
+void xputsn(char *s);
 void xputs(char *s);
 void xputc(char c);
 void xflush(void);
@@ -207,7 +209,9 @@ int highest_bit(unsigned long l);
 int64_t peek_le(void *ptr, unsigned size);
 int64_t peek_be(void *ptr, unsigned size);
 int64_t peek(void *ptr, unsigned size);
-void poke(void *ptr, uint64_t val, int size);
+void poke_le(void *ptr, long long val, unsigned size);
+void poke_be(void *ptr, long long val, unsigned size);
+void poke(void *ptr, long long val, unsigned size);
 struct string_list *find_in_path(char *path, char *filename);
 long long estrtol(char *str, char **end, int base);
 long long xstrtol(char *str, char **end, int base);
@@ -249,7 +253,7 @@ int regexec0(regex_t *preg, char *string, long len, int nmatch,
   regmatch_t pmatch[], int eflags);
 char *getusername(uid_t uid);
 char *getgroupname(gid_t gid);
-void do_lines(int fd, void (*call)(char **pline, long len));
+void do_lines(int fd, char delim, void (*call)(char **pline, long len));
 long environ_bytes();
 long long millitime(void);
 char *format_iso_time(char *buf, size_t len, struct timespec *ts);
@@ -301,11 +305,12 @@ int xsocket(int domain, int type, int protocol);
 void xsetsockopt(int fd, int level, int opt, void *val, socklen_t len);
 struct addrinfo *xgetaddrinfo(char *host, char *port, int family, int socktype,
   int protocol, int flags);
-int xconnect(struct addrinfo *ai_arg);
-int xbind(struct addrinfo *ai_arg);
+int xconnect(struct addrinfo *ai);
+int xbind(struct addrinfo *ai);
 int xpoll(struct pollfd *fds, int nfds, int timeout);
 int pollinate(int in1, int in2, int out1, int out2, int timeout, int shutdown_timeout);
 char *ntop(struct sockaddr *sa);
+void xsendto(int sockfd, void *buf, size_t len, struct sockaddr *dest);
 
 // password.c
 int get_salt(char *salt, char * algo);
