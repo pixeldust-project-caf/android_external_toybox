@@ -586,24 +586,32 @@ int64_t peek_be(void *ptr, unsigned size)
 
 int64_t peek(void *ptr, unsigned size)
 {
-  return IS_BIG_ENDIAN ? peek_be(ptr, size) : peek_le(ptr, size);
+  return (IS_BIG_ENDIAN ? peek_be : peek_le)(ptr, size);
 }
 
-void poke(void *ptr, uint64_t val, int size)
+void poke_le(void *ptr, long long val, unsigned size)
 {
-  if (size & 8) {
-    volatile uint64_t *p = (uint64_t *)ptr;
-    *p = val;
-  } else if (size & 4) {
-    volatile int *p = (int *)ptr;
-    *p = val;
-  } else if (size & 2) {
-    volatile short *p = (short *)ptr;
-    *p = val;
-  } else {
-    volatile char *p = (char *)ptr;
-    *p = val;
+  char *c = ptr;
+
+  while (size--) {
+    *c++ = val&255;
+    val >>= 8;
   }
+}
+
+void poke_be(void *ptr, long long val, unsigned size)
+{
+  char *c = ptr + size;
+
+  while (size--) {
+    *--c = val&255;
+    val >>=8;
+  }
+}
+
+void poke(void *ptr, long long val, unsigned size)
+{
+  (IS_BIG_ENDIAN ? poke_be : poke_le)(ptr, val, size);
 }
 
 // Iterate through an array of files, opening each one and calling a function
@@ -648,7 +656,7 @@ void loopfiles(char **argv, void (*function)(int fd, char *name))
 static void (*do_lines_bridge)(char **pline, long len);
 static void loopfile_lines_bridge(int fd, char *name)
 {
-  do_lines(fd, do_lines_bridge);
+  do_lines(fd, '\n', do_lines_bridge);
 }
 
 void loopfiles_lines(char **argv, void (*function)(char **pline, long len))
@@ -1348,7 +1356,7 @@ char *getgroupname(gid_t gid)
 // the line pointer if they want to keep it, or 1 to terminate processing,
 // otherwise line is freed. Passed file descriptor is closed at the end.
 // At EOF calls function(0, 0)
-void do_lines(int fd, void (*call)(char **pline, long len))
+void do_lines(int fd, char delim, void (*call)(char **pline, long len))
 {
   FILE *fp = fd ? xfdopen(fd, "r") : stdin;
 
@@ -1356,7 +1364,7 @@ void do_lines(int fd, void (*call)(char **pline, long len))
     char *line = 0;
     ssize_t len;
 
-    len = getline(&line, (void *)&len, fp);
+    len = getdelim(&line, (void *)&len, delim, fp);
     if (len > 0) {
       call(&line, len);
       if (line == (void *)1) break;

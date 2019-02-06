@@ -66,8 +66,6 @@ struct killall_data {
 // toys/lsb/md5sum.c
 
 struct md5sum_data {
-  struct arg_list *c;
-
   int sawline;
 
   // Crypto variables blanked after summing
@@ -763,6 +761,12 @@ struct sh_data {
   long lineno;
 };
 
+// toys/pending/sntp.c
+
+struct sntp_data {
+  int unused;
+};
+
 // toys/pending/stty.c
 
 struct stty_data {
@@ -1069,7 +1073,10 @@ struct find_data {
 struct grep_data {
   long m, A, B, C;
   struct arg_list *f, *e, *M, *S;
+  char *color;
 
+  char *purple, *cyan, *red, *green, *grey;
+  struct double_list *reg;
   char indelim, outdelim;
   int found, tried;
 };
@@ -1240,6 +1247,7 @@ struct sed_data {
   long nextlen, rememberlen, count;
   int fdout, noeol;
   unsigned xx;
+  char delim;
 };
 
 // toys/posix/sort.c
@@ -1413,6 +1421,7 @@ extern union global_union {
 	struct openvt_data openvt;
 	struct route_data route;
 	struct sh_data sh;
+	struct sntp_data sntp;
 	struct stty_data stty;
 	struct sulogin_data sulogin;
 	struct syslogd_data syslogd;
