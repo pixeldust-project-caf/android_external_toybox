@@ -259,7 +259,7 @@ struct hexedit_data {
 // toys/other/hwclock.c
 
 struct hwclock_data {
-  char *fname;
+  char *f;
 
   int utc;
 };
@@ -451,13 +451,9 @@ struct arping_data {
 // toys/pending/bc.c
 
 struct bc_data {
-  long tty;
-  long ttyin;
-
-  unsigned long sig;
-  unsigned long sigc;
-  unsigned long signe;
-  long sig_other;
+  // This actually needs to be a BcVm*, but the toybox build
+  // system complains if I make it so. Instead, we'll just cast.
+  char *vm;
 };
 
 // toys/pending/bootchartd.c
@@ -764,7 +760,7 @@ struct sh_data {
 // toys/pending/sntp.c
 
 struct sntp_data {
-  int unused;
+  char *p, *m;
 };
 
 // toys/pending/stty.c
@@ -1326,7 +1322,7 @@ struct wc_data {
 // toys/posix/xargs.c
 
 struct xargs_data {
-  long s, n, L;
+  long s, n;
   char *E, *I;
 
   long entries, bytes;

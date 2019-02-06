@@ -1527,6 +1527,14 @@
 #undef FOR_logname
 #endif
 
+// logwrapper    
+#undef OPTSTR_logwrapper
+#define OPTSTR_logwrapper 0
+#ifdef CLEANUP_logwrapper
+#undef CLEANUP_logwrapper
+#undef FOR_logwrapper
+#endif
+
 // losetup >2S(sizelimit)#s(show)ro#j:fdca[!afj] >2S(sizelimit)#s(show)ro#j:fdca[!afj]
 #undef OPTSTR_losetup
 #define OPTSTR_losetup ">2S(sizelimit)#s(show)ro#j:fdca[!afj]"
@@ -2486,12 +2494,19 @@
 #undef FOR_sleep
 #endif
 
-// sntp   <1
+// sntp   m:Sp:asdD[!as]
 #undef OPTSTR_sntp
-#define OPTSTR_sntp "<1"
+#define OPTSTR_sntp "m:Sp:asdD[!as]"
 #ifdef CLEANUP_sntp
 #undef CLEANUP_sntp
 #undef FOR_sntp
+#undef FLAG_D
+#undef FLAG_d
+#undef FLAG_s
+#undef FLAG_a
+#undef FLAG_p
+#undef FLAG_S
+#undef FLAG_m
 #endif
 
 // sort gS:T:mo:k*t:xVbMcszdfirun gS:T:mo:k*t:xVbMcszdfirun
@@ -3232,9 +3247,9 @@
 #undef FLAG_a
 #endif
 
-// xargs ^I:E:L#ptxrn#<1s#0[!0E] ^I:E:L#ptxrn#<1s#0[!0E]
+// xargs ^I:E:ptrn#<1s#0[!0E] ^I:E:ptrn#<1s#0[!0E]
 #undef OPTSTR_xargs
-#define OPTSTR_xargs "^I:E:L#ptxrn#<1s#0[!0E]"
+#define OPTSTR_xargs "^I:E:ptrn#<1s#0[!0E]"
 #ifdef CLEANUP_xargs
 #undef CLEANUP_xargs
 #undef FOR_xargs
@@ -3242,10 +3257,8 @@
 #undef FLAG_s
 #undef FLAG_n
 #undef FLAG_r
-#undef FLAG_x
 #undef FLAG_t
 #undef FLAG_p
-#undef FLAG_L
 #undef FLAG_E
 #undef FLAG_I
 #endif
@@ -4578,6 +4591,12 @@
 #endif
 #endif
 
+#ifdef FOR_logwrapper
+#ifndef TT
+#define TT this.logwrapper
+#endif
+#endif
+
 #ifdef FOR_losetup
 #ifndef TT
 #define TT this.losetup
@@ -5385,6 +5404,13 @@
 #ifndef TT
 #define TT this.sntp
 #endif
+#define FLAG_D (FORCED_FLAG<<0)
+#define FLAG_d (FORCED_FLAG<<1)
+#define FLAG_s (FORCED_FLAG<<2)
+#define FLAG_a (FORCED_FLAG<<3)
+#define FLAG_p (FORCED_FLAG<<4)
+#define FLAG_S (FORCED_FLAG<<5)
+#define FLAG_m (FORCED_FLAG<<6)
 #endif
 
 #ifdef FOR_sort
@@ -6013,12 +6039,10 @@
 #define FLAG_s (1<<1)
 #define FLAG_n (1<<2)
 #define FLAG_r (1<<3)
-#define FLAG_x (1<<4)
-#define FLAG_t (1<<5)
-#define FLAG_p (1<<6)
-#define FLAG_L (1<<7)
-#define FLAG_E (1<<8)
-#define FLAG_I (1<<9)
+#define FLAG_t (1<<4)
+#define FLAG_p (1<<5)
+#define FLAG_E (1<<6)
+#define FLAG_I (1<<7)
 #endif
 
 #ifdef FOR_xxd
