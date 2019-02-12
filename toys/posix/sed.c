@@ -11,7 +11,7 @@
  *       What's the right thing to do for -i when write fails? Skip to next?
  * test '//q' with no previous regex, also repeat previous regex?
 
-USE_SED(NEWTOY(sed, "(help)(version)e*f*i:;nErz(null-data)[+Er]", TOYFLAG_USR|TOYFLAG_BIN|TOYFLAG_LOCALE|TOYFLAG_NOHELP))
+USE_SED(NEWTOY(sed, "(help)(version)e*f*i:;nErz(null-data)[+Er]", TOYFLAG_BIN|TOYFLAG_LOCALE|TOYFLAG_NOHELP))
 
 config SED
   bool "sed"
@@ -788,7 +788,7 @@ static void parse_pattern(char **pline, long len)
         if (!(s = unescape_delimited_string(&line, 0))) goto error;
         if (!*s) command->rmatch[i] = 0;
         else {
-          xregcomp((void *)reg, s, FLAG(r)*REG_EXTENDED);
+          xregcomp((void *)reg, s, REG_EXTENDED*!!FLAG(r));
           command->rmatch[i] = reg-toybuf;
           reg += sizeof(regex_t);
         }
@@ -882,7 +882,7 @@ resume_s:
       // allocating the space was done by extend_string() above
       if (!*TT.remember) command->arg1 = 0;
       else xregcomp((void *)(command->arg1 + (char *)command), TT.remember,
-        (FLAG(r)*REG_EXTENDED)|((command->sflags&1)*REG_ICASE));
+        (REG_EXTENDED*!!FLAG(r))|((command->sflags&1)*REG_ICASE));
       free(TT.remember);
       TT.remember = 0;
       if (*line == 'w') {
