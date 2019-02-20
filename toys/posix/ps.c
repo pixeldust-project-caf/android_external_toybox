@@ -811,10 +811,9 @@ static int get_ps(struct dirtree *new)
     sprintf(buf, "%lld/statm", slot[SLOT_tid]);
     if (!readfileat(fd, buf, buf, &temp)) *buf = 0;
 
-    // Skip redundant RSS field, we got it from stat
-    for (s = buf, i=0; i<3; i++)
-      if (!sscanf(s, " %lld%n", slot+SLOT_vsz+i/2, &j)) slot[SLOT_vsz+i/2] = 0;
-      else s += j;
+    // Skip redundant RSS field, we got it from stat.
+    slot[SLOT_vsz] = slot[SLOT_shr] = 0;
+    sscanf(buf, "%lld %*d %lld", &slot[SLOT_vsz], &slot[SLOT_shr]);
   }
 
   // Do we need to read "exe"?
@@ -1432,6 +1431,11 @@ static int header_line(int line, int rev)
   return line-1;
 }
 
+static void top_cursor_cleanup(void)
+{
+  tty_esc("?25h");
+}
+
 static void top_common(
   int (*filter)(long long *oslot, long long *nslot, int milis))
 {
@@ -1448,8 +1452,12 @@ static void top_common(
   int i, lines, topoff = 0, done = 0;
   char stdout_buf[BUFSIZ];
 
-  // Avoid flicker in interactive mode.
-  if (!FLAG(b)) setbuf(stdout, stdout_buf);
+  // Avoid flicker and hide the cursor in interactive mode.
+  if (!FLAG(b)) {
+    setbuf(stdout, stdout_buf);
+    tty_esc("?25l");
+    sigatexit(top_cursor_cleanup);
+  }
 
   toys.signal = SIGWINCH;
   TT.bits = get_headers(TT.fields, toybuf, sizeof(toybuf));
@@ -1536,6 +1544,8 @@ static void top_common(
         // Display "top" header.
         if (*toys.which->name == 't') {
           struct ofields field;
+          char *hr0 = toybuf+sizeof(toybuf)-32, *hr1 = hr0-32, *hr2 = hr1-32,
+            *hr3 = hr2-32;
           long long ll, up = 0;
           long run[6];
           int j;
@@ -1556,13 +1566,21 @@ static void top_common(
                     "\nBuffers:","\nCached:","\nSwapTotal:","\nSwapFree:"}[i]);
               run[i] = pos ? atol(pos) : 0;
             }
-            sprintf(toybuf,
-             "Mem:%10ldk total,%9ldk used,%9ldk free,%9ldk buffers",
-              run[0], run[0]-run[1], run[1], run[2]);
+
+            human_readable(hr0, 1024*run[0], 0);
+            human_readable(hr1, 1024*(run[0]-run[1]), 0);
+            human_readable(hr2, 1024*run[1], 0);
+            human_readable(hr3, 1024*run[2], 0);
+            sprintf(toybuf, "  Mem: %9s total, %9s used, %9s free, %9s buffers",
+              hr0, hr1, hr2, hr3);
             lines = header_line(lines, 0);
-            sprintf(toybuf,
-              "Swap:%9ldk total,%9ldk used,%9ldk free,%9ldk cached",
-              run[4], run[4]-run[5], run[5], run[3]);
+
+            human_readable(hr0, 1024*run[4], 0);
+            human_readable(hr1, 1024*(run[4]-run[5]), 0);
+            human_readable(hr2, 1024*run[5], 0);
+            human_readable(hr3, 1024*run[3], 0);
+            sprintf(toybuf, " Swap: %9s total, %9s used, %9s free, %9s cached",
+              hr0, hr1, hr2, hr3);
             lines = header_line(lines, 0);
           }
 
@@ -1661,7 +1679,7 @@ static void top_common(
 
       // Flush unknown escape sequences.
       if (i==27) while (0<scan_key_getsize(scratch, 0, &TT.width, &TT.height));
-      else if (i==' ') {
+      else if (i=='\r' || i==' ') {
         timeout = 0;
         break;
       } else if (toupper(i)=='R')

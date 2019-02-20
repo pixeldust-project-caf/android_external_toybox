@@ -189,7 +189,7 @@ struct ping_data {
 
 struct sntp_data {
   long r;
-  char *p, *m;
+  char *p, *m, *M;
 };
 
 // toys/net/tunctl.c
@@ -461,6 +461,10 @@ struct bc_data {
   // This actually needs to be a BcVm*, but the toybox build
   // system complains if I make it so. Instead, we'll just cast.
   char *vm;
+
+  size_t nchars;
+  char *file, sig, max_ibase;
+  uint16_t line_len;
 };
 
 // toys/pending/bootchartd.c
