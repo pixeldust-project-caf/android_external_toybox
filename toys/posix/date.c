@@ -17,14 +17,17 @@ config DATE
 
     Set/get the current date/time. With no SET shows the current date.
 
-    Default SET format is "MMDDhhmm[[CC]YY][.ss]", that's (2 digits each)
-    month, day, hour (0-23), and minute. Optionally century, year, and second.
-    Also accepts "@UNIXTIME[.FRACTION]" as seconds since midnight Jan 1 1970.
-
     -d	Show DATE instead of current time (convert date format)
     -D	+FORMAT for SET or -d (instead of MMDDhhmm[[CC]YY][.ss])
     -r	Use modification time of FILE instead of current date
     -u	Use UTC instead of current timezone
+
+    Supported input formats:
+
+    MMDDhhmm[[CC]YY][.ss]     POSIX
+    @UNIXTIME[.FRACTION]      seconds since midnight 1970-01-01
+    YYYY-MM-DD [hh:mm[:ss]]   ISO 8601
+    hh:mm[:ss]                24-hour time today
 
     +FORMAT specifies display format string using strftime(3) syntax:
 
@@ -57,7 +60,13 @@ GLOBALS(
 // returns 0 success, nonzero for error
 static int parse_default(char *str, struct tm *tm)
 {
-  int len = 0;
+  time_t now;
+  int len = 0, i;
+  char *formats[] = {
+    // Formats with years must come first.
+    "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d",
+    "%H:%M:%S", "%H:%M"
+  };
 
   // Parse @UNIXTIME[.FRACTION]
   if (*str == '@') {
@@ -78,12 +87,22 @@ static int parse_default(char *str, struct tm *tm)
     }
     if (str[len]) return 1;
     tt = ll;
-    gmtime_r(&tt, tm);
+    localtime_r(&tt, tm);
 
     return 0;
   }
 
-  // Posix format
+  // Is it one of the fancy formats?
+  for (i = 0; i<ARRAY_LEN(formats); i++) {
+    char *p;
+
+    now = time(0);
+    localtime_r(&now, tm);
+    tm->tm_hour = tm->tm_min = tm->tm_sec = 0;
+    if ((p = strptime(str, formats[i], tm)) && !*p) return 0;
+  }
+
+  // Posix format?
   sscanf(str, "%2u%2u%2u%2u%n", &tm->tm_mon, &tm->tm_mday, &tm->tm_hour,
     &tm->tm_min, &len);
   if (len != 8) return 1;
@@ -119,6 +138,11 @@ static int parse_default(char *str, struct tm *tm)
     str += len;
   } else tm->tm_sec = 0;
 
+  // Fix up weekday
+  now = mktime(tm);
+  localtime_r(&now, tm);
+
+  // shouldn't be any trailing garbage
   return *str;
 }
 
