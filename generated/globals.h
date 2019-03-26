@@ -803,15 +803,27 @@ struct syslogd_data {
 // toys/pending/tar.c
 
 struct tar_data {
-  char *fname;
-  char *dir;
-  struct arg_list *inc_file;
-  struct arg_list *exc_file;
-  char *tocmd;
+  char *f, *C;
+  struct arg_list *T, *X;
+  char *to_command;
   struct arg_list *exc;
 
+// exc is an argument but inc isn't?
   struct arg_list *inc, *pass;
-  void *inodes, *handle;
+  void *inodes;
+  char *cwd;
+  int fd;
+
+  // Parsed information about a tar header.
+  struct {
+    char *name, *link_target, *uname, *gname;
+    long long size;
+    uid_t uid;
+    gid_t gid;
+    mode_t mode;
+    time_t mtime;
+    dev_t device;
+  } hdr;
 };
 
 // toys/pending/tcpsvd.c
