@@ -1,15 +1,13 @@
-// toys/android/getprop.c
-
-struct getprop_data {
-  size_t size;
-  char **nv; // name/value pairs: even=name, odd=value
-  struct selabel_handle *handle;
-};
-
 // toys/android/log.c
 
 struct log_data {
   char *t, *p;
+};
+
+// toys/example/demo_number.c
+
+struct demo_number_data {
+  long D;
 };
 
 // toys/example/hello.c
@@ -46,6 +44,12 @@ struct dmesg_data {
   time_t tea;
 };
 
+// toys/lsb/gzip.c
+
+struct gzip_data {
+  int level;
+};
+
 // toys/lsb/hostname.c
 
 struct hostname_data {
@@ -61,6 +65,7 @@ struct killall_data {
   pid_t cur_pid;
   char **names;
   short *err;
+  struct int_list { struct int_list *next; int val; } *pids;
 };
 
 // toys/lsb/md5sum.c
@@ -87,7 +92,7 @@ struct mknod_data {
 // toys/lsb/mktemp.c
 
 struct mktemp_data {
-  char *p;
+  char *p, *tmpdir;
 };
 
 // toys/lsb/mount.c
@@ -188,7 +193,7 @@ struct ping_data {
 // toys/net/sntp.c
 
 struct sntp_data {
-  long r;
+  long r, t;
   char *p, *m, *M;
 };
 
@@ -213,6 +218,12 @@ struct base64_data {
   unsigned total;
 };
 
+// toys/other/blkid.c
+
+struct blkid_data {
+  struct arg_list *s;
+};
+
 // toys/other/blockdev.c
 
 struct blockdev_data {
@@ -234,8 +245,7 @@ struct dos2unix_data {
 // toys/other/fallocate.c
 
 struct fallocate_data {
-  long offset;
-  long size;
+  long o, l;
 };
 
 // toys/other/fmt.c
@@ -274,9 +284,7 @@ struct hwclock_data {
 // toys/other/ionice.c
 
 struct ionice_data {
-  long pid;
-  long level;
-  long class;
+  long p, n, c;
 };
 
 // toys/other/login.c
@@ -296,6 +304,18 @@ struct losetup_data {
   int openflags;
   dev_t jdev;
   ino_t jino;
+  char *dir;
+};
+
+// toys/other/lsattr.c
+
+struct lsattr_data {
+  long v;
+  long p;
+
+  long add, rm, set;
+  // !add and !rm tell us whether they were used, but `chattr =` is meaningful.
+  int have_set;
 };
 
 // toys/other/lspci.c
@@ -310,7 +330,7 @@ struct lspci_data {
 // toys/other/makedevs.c
 
 struct makedevs_data {
-  char *fname;
+  char *d;
 };
 
 // toys/other/mix.c
@@ -339,6 +359,7 @@ struct modinfo_data {
   char *F, *k, *b;
 
   long mod;
+  int count;
 };
 
 // toys/other/nsenter.c
@@ -391,6 +412,12 @@ struct switch_root_data {
   char *c;
 
   dev_t rootdev;
+};
+
+// toys/other/tac.c
+
+struct tac_data {
+  struct double_list *dl;
 };
 
 // toys/other/timeout.c
@@ -473,7 +500,7 @@ struct bootchartd_data {
   int proc_accounting;
   int is_login;
 
-  void *head;
+  pid_t cur_pid;
 };
 
 // toys/pending/brctl.c
@@ -514,6 +541,7 @@ struct dd_data {
     long sz, count;
     unsigned long long offset;
   } in, out;
+  unsigned conv, iflag, oflag;
 };;
 
 // toys/pending/dhcp.c
@@ -615,6 +643,13 @@ struct getfattr_data {
   char *n;
 };
 
+// toys/pending/getopt.c
+
+struct getopt_data {
+  struct arg_list *l;
+  char *o, *n;
+};
+
 // toys/pending/getty.c
 
 struct getty_data {
@@ -635,12 +670,6 @@ struct getty_data {
 
 struct groupadd_data {
   long gid;
-};
-
-// toys/pending/gzip.c
-
-struct gzip_data {
-  int level;
 };
 
 // toys/pending/host.c
@@ -700,6 +729,15 @@ struct lsof_data {
   int last_shown_pid, shown_header;
 };
 
+// toys/pending/man.c
+
+struct man_data {
+  char *M, *k;
+
+  char any, cell, ex, *f, k_done, *line, *m, **sct, **scts, **sufs;
+  regex_t reg;
+};
+
 // toys/pending/mke2fs.c
 
 struct mke2fs_data {
@@ -752,6 +790,17 @@ struct openvt_data {
   unsigned long vt_num;
 };
 
+// toys/pending/readelf.c
+
+struct readelf_data {
+  char *x, *p;
+
+  char *elf, *shstrtab, *f;
+  long long shoff, phoff, size;
+  int bits, shnum, shentsize, phentsize;
+  int64_t (*elf_int)(void *ptr, unsigned size);
+};
+
 // toys/pending/route.c
 
 struct route_data {
@@ -761,9 +810,33 @@ struct route_data {
 // toys/pending/sh.c
 
 struct sh_data {
-  char *command;
+  char *c;
 
   long lineno;
+  char **locals, *subshell_env;
+  struct double_list functions;
+  unsigned options, jobcnt, loc_ro, loc_magic;
+  int hfd;  // next high filehandle (>= 10)
+
+  // Running jobs.
+  struct sh_job {
+    struct sh_job *next, *prev;
+    unsigned jobno;
+
+    // Every pipeline has at least one set of arguments or it's Not A Thing
+    struct sh_arg {
+      char **v;
+      int c;
+    } pipeline;
+
+    // null terminated array of running processes in pipeline
+    struct sh_process {
+      struct sh_process *next, *prev;
+      struct arg_list *delete;   // expanded strings
+      int *urd, envlen, pid, exit;  // undo redirects, child PID, exit status
+      struct sh_arg arg;
+    } *procs, *proc;
+  } *jobs, *job;
 };
 
 // toys/pending/stty.c
@@ -798,20 +871,6 @@ struct syslogd_data {
   struct unsocks *lsocks;  // list of listen sockets
   struct logfile *lfiles;  // list of write logfiles
   int sigfd[2];
-};
-
-// toys/pending/tar.c
-
-struct tar_data {
-  char *fname;
-  char *dir;
-  struct arg_list *inc_file;
-  struct arg_list *exc_file;
-  char *tocmd;
-  struct arg_list *exc;
-
-  struct arg_list *inc, *pass;
-  void *inodes, *handle;
 };
 
 // toys/pending/tcpsvd.c
@@ -925,11 +984,74 @@ struct useradd_data {
 // toys/pending/vi.c
 
 struct vi_data {
+    char *s;
     int cur_col;
     int cur_row;
+    int scr_row;
+    int drawn_row;
+    int drawn_col;
     unsigned screen_height;
     unsigned screen_width;
     int vi_mode;
+    int count0;
+    int count1;
+    int vi_mov_flag;
+    int modified;
+    char vi_reg;
+    char *last_search;
+    int tabstop;
+    int list;
+    struct str_line {
+      int alloc;
+      int len;
+      char *data;
+    } *il;
+    size_t screen; //offset in slices must be higher than cursor
+    size_t cursor; //offset in slices
+    //yank buffer
+    struct yank_buf {
+      char reg;
+      int alloc;
+      char* data;
+    } yank;
+
+// mem_block contains RO data that is either original file as mmap
+// or heap allocated inserted data
+//
+//
+//
+  struct block_list {
+    struct block_list *next, *prev;
+    struct mem_block {
+      size_t size;
+      size_t len;
+      enum alloc_flag {
+        MMAP,  //can be munmap() before exit()
+        HEAP,  //can be free() before exit()
+        STACK, //global or stack perhaps toybuf
+      } alloc;
+      const char *data;
+    } *node;
+  } *text;
+
+// slices do not contain actual allocated data but slices of data in mem_block
+// when file is first opened it has only one slice.
+// after inserting data into middle new mem_block is allocated for insert data
+// and 3 slices are created, where first and last slice are pointing to original
+// mem_block with offsets, and middle slice is pointing to newly allocated block
+// When deleting, data is not freed but mem_blocks are sliced more such way that
+// deleted data left between 2 slices
+  struct slice_list {
+    struct slice_list *next, *prev;
+    struct slice {
+      size_t len;
+      const char *data;
+    } *node;
+  } *slices;
+
+  size_t filesize;
+  int fd; //file_handle
+
 };
 
 // toys/pending/wget.c
@@ -942,6 +1064,12 @@ struct wget_data {
 
 struct basename_data {
   char *s;
+};
+
+// toys/posix/cal.c
+
+struct cal_data {
+  struct tm *now;
 };
 
 // toys/posix/chgrp.c
@@ -1068,13 +1196,14 @@ struct find_data {
   int topdir, xdev, depth;
   time_t now;
   long max_bytes;
+  char *start;
 };
 
 // toys/posix/grep.c
 
 struct grep_data {
   long m, A, B, C;
-  struct arg_list *f, *e, *M, *S;
+  struct arg_list *f, *e, *M, *S, *exclude_dir;
   char *color;
 
   char *purple, *cyan, *red, *green, *grey;
@@ -1112,6 +1241,12 @@ struct kill_data {
   struct arg_list *o;
 };
 
+// toys/posix/ln.c
+
+struct ln_data {
+  char *t;
+};
+
 // toys/posix/logger.c
 
 struct logger_data {
@@ -1121,6 +1256,7 @@ struct logger_data {
 // toys/posix/ls.c
 
 struct ls_data {
+  long w;
   long l;
   char *color;
 
@@ -1159,6 +1295,7 @@ struct nl_data {
 
   // Count of consecutive blank lines for -l has to persist between files
   long lcount;
+  long slen;
 };
 
 // toys/posix/od.c
@@ -1187,11 +1324,10 @@ struct paste_data {
 
 struct patch_data {
   char *i, *d;
-  long p;
+  long p, g, F;
 
-  struct double_list *current_hunk;
-  long oldline, oldlen, newline, newlen;
-  long linenum;
+  void *current_hunk;
+  long oldline, oldlen, newline, newlen, linenum, outnum;
   int context, state, filein, fileout, filepatch, hunknum;
   char *tempname;
 };
@@ -1261,7 +1397,7 @@ struct sort_data {
 
   void *key_list;
   int linecount;
-  char **lines;
+  char **lines, *name;
 };
 
 // toys/posix/split.c
@@ -1284,7 +1420,42 @@ struct strings_data {
 struct tail_data {
   long n, c;
 
-  int file_no, ffd, *files;
+  int file_no, last_fd;
+  struct xnotify *not;
+};
+
+// toys/posix/tar.c
+
+struct tar_data {
+  char *f, *C;
+  struct arg_list *T, *X;
+  char *to_command, *owner, *group, *mtime, *mode;
+  struct arg_list *exclude;
+
+  struct double_list *incl, *excl, *seen;
+  struct string_list *dirs;
+  char *cwd;
+  int fd, ouid, ggid, hlc, warn, adev, aino, sparselen;
+  long long *sparse;
+  time_t mtt;
+
+  // hardlinks seen so far (hlc many)
+  struct {
+    char *arg;
+    ino_t ino;
+    dev_t dev;
+  } *hlx;
+
+  // Parsed information about a tar header.
+  struct tar_header {
+    char *name, *link_target, *uname, *gname;
+    long long size, ssize;
+    uid_t uid;
+    gid_t gid;
+    mode_t mode;
+    time_t mtime;
+    dev_t device;
+  } hdr;
 };
 
 // toys/posix/tee.c
@@ -1328,19 +1499,21 @@ struct wc_data {
 // toys/posix/xargs.c
 
 struct xargs_data {
-  long s, n;
-  char *E, *I;
+  long s, n, P;
+  char *E;
 
   long entries, bytes;
   char delim;
+  FILE *tty;
 };
 
 extern union global_union {
-	struct getprop_data getprop;
 	struct log_data log;
+	struct demo_number_data demo_number;
 	struct hello_data hello;
 	struct skeleton_data skeleton;
 	struct dmesg_data dmesg;
+	struct gzip_data gzip;
 	struct hostname_data hostname;
 	struct killall_data killall;
 	struct md5sum_data md5sum;
@@ -1362,6 +1535,7 @@ extern union global_union {
 	struct tunctl_data tunctl;
 	struct acpi_data acpi;
 	struct base64_data base64;
+	struct blkid_data blkid;
 	struct blockdev_data blockdev;
 	struct chrt_data chrt;
 	struct dos2unix_data dos2unix;
@@ -1373,6 +1547,7 @@ extern union global_union {
 	struct ionice_data ionice;
 	struct login_data login;
 	struct losetup_data losetup;
+	struct lsattr_data lsattr;
 	struct lspci_data lspci;
 	struct makedevs_data makedevs;
 	struct mix_data mix;
@@ -1386,6 +1561,7 @@ extern union global_union {
 	struct stat_data stat;
 	struct swapon_data swapon;
 	struct switch_root_data switch_root;
+	struct tac_data tac;
 	struct timeout_data timeout;
 	struct truncate_data truncate;
 	struct watch_data watch;
@@ -1408,9 +1584,9 @@ extern union global_union {
 	struct fold_data fold;
 	struct fsck_data fsck;
 	struct getfattr_data getfattr;
+	struct getopt_data getopt;
 	struct getty_data getty;
 	struct groupadd_data groupadd;
-	struct gzip_data gzip;
 	struct host_data host;
 	struct ip_data ip;
 	struct ipcrm_data ipcrm;
@@ -1418,16 +1594,17 @@ extern union global_union {
 	struct klogd_data klogd;
 	struct last_data last;
 	struct lsof_data lsof;
+	struct man_data man;
 	struct mke2fs_data mke2fs;
 	struct modprobe_data modprobe;
 	struct more_data more;
 	struct openvt_data openvt;
+	struct readelf_data readelf;
 	struct route_data route;
 	struct sh_data sh;
 	struct stty_data stty;
 	struct sulogin_data sulogin;
 	struct syslogd_data syslogd;
-	struct tar_data tar;
 	struct tcpsvd_data tcpsvd;
 	struct telnet_data telnet;
 	struct telnetd_data telnetd;
@@ -1439,6 +1616,7 @@ extern union global_union {
 	struct vi_data vi;
 	struct wget_data wget;
 	struct basename_data basename;
+	struct cal_data cal;
 	struct chgrp_data chgrp;
 	struct chmod_data chmod;
 	struct cksum_data cksum;
@@ -1458,6 +1636,7 @@ extern union global_union {
 	struct iconv_data iconv;
 	struct id_data id;
 	struct kill_data kill;
+	struct ln_data ln;
 	struct logger_data logger;
 	struct ls_data ls;
 	struct mkdir_data mkdir;
@@ -1474,6 +1653,7 @@ extern union global_union {
 	struct split_data split;
 	struct strings_data strings;
 	struct tail_data tail;
+	struct tar_data tar;
 	struct tee_data tee;
 	struct touch_data touch;
 	struct ulimit_data ulimit;

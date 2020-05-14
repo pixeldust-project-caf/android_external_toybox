@@ -54,6 +54,8 @@
 #define USE_TOYBOX_UTMPX(...)
 #define CFG_ACPI 1
 #define USE_ACPI(...) __VA_ARGS__
+#define CFG_ARCH 0
+#define USE_ARCH(...)
 #define CFG_ARPING 0
 #define USE_ARPING(...)
 #define CFG_ARP 0
@@ -88,8 +90,8 @@
 #define USE_CAT(...) __VA_ARGS__
 #define CFG_CD 0
 #define USE_CD(...)
-#define CFG_CHATTR 1
-#define USE_CHATTR(...) __VA_ARGS__
+#define CFG_CHATTR 0
+#define USE_CHATTR(...)
 #define CFG_CHCON 1
 #define USE_CHCON(...) __VA_ARGS__
 #define CFG_CHGRP 1
@@ -166,6 +168,8 @@
 #define USE_DIRNAME(...) __VA_ARGS__
 #define CFG_DMESG 1
 #define USE_DMESG(...) __VA_ARGS__
+#define CFG_DNSDOMAINNAME 0
+#define USE_DNSDOMAINNAME(...)
 #define CFG_DOS2UNIX 1
 #define USE_DOS2UNIX(...) __VA_ARGS__
 #define CFG_DUMPLEASES 0
@@ -228,8 +232,8 @@
 #define USE_GETENFORCE(...) __VA_ARGS__
 #define CFG_GETFATTR 1
 #define USE_GETFATTR(...) __VA_ARGS__
-#define CFG_GETPROP 0
-#define USE_GETPROP(...)
+#define CFG_GETOPT 1
+#define USE_GETOPT(...) __VA_ARGS__
 #define CFG_GETTY 0
 #define USE_GETTY(...)
 #define CFG_GREP 1
@@ -328,8 +332,8 @@
 #define USE_LOGWRAPPER(...)
 #define CFG_LOSETUP 1
 #define USE_LOSETUP(...) __VA_ARGS__
-#define CFG_LSATTR 1
-#define USE_LSATTR(...) __VA_ARGS__
+#define CFG_LSATTR 0
+#define USE_LSATTR(...)
 #define CFG_LS_COLOR 1
 #define USE_LS_COLOR(...) __VA_ARGS__
 #define CFG_LSMOD 1
@@ -348,6 +352,8 @@
 #define USE_LS_Z(...) __VA_ARGS__
 #define CFG_MAKEDEVS 1
 #define USE_MAKEDEVS(...) __VA_ARGS__
+#define CFG_MAN 0
+#define USE_MAN(...)
 #define CFG_MCOOKIE 0
 #define USE_MCOOKIE(...)
 #define CFG_MD5SUM 1
@@ -462,6 +468,8 @@
 #define USE_PWD(...) __VA_ARGS__
 #define CFG_READAHEAD 0
 #define USE_READAHEAD(...)
+#define CFG_READELF 1
+#define USE_READELF(...) __VA_ARGS__
 #define CFG_READLINK 1
 #define USE_READLINK(...) __VA_ARGS__
 #define CFG_REALPATH 1
@@ -580,8 +588,8 @@
 #define USE_TELNETD(...)
 #define CFG_TELNET 0
 #define USE_TELNET(...)
-#define CFG_TEST 0
-#define USE_TEST(...)
+#define CFG_TEST 1
+#define USE_TEST(...) __VA_ARGS__
 #define CFG_TFTPD 0
 #define USE_TFTPD(...)
 #define CFG_TFTP 0
@@ -638,8 +646,8 @@
 #define USE_UUIDGEN(...) __VA_ARGS__
 #define CFG_VCONFIG 1
 #define USE_VCONFIG(...) __VA_ARGS__
-#define CFG_VI 0
-#define USE_VI(...)
+#define CFG_VI 1
+#define USE_VI(...) __VA_ARGS__
 #define CFG_VMSTAT 1
 #define USE_VMSTAT(...) __VA_ARGS__
 #define CFG_WATCH 1
